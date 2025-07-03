@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, Plus, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, Plus, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal } from 'lucide-react';
 
 interface Session {
   id: number;
@@ -30,10 +30,12 @@ interface DragState {
 const Calendar: React.FC = () => {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [viewMode, setViewMode] = useState('weekly');
-  const [hoveredSession, setHoveredSession] = useState<number | null>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  // Novo controle para menu de ações
+  const [actionMenuSessionId, setActionMenuSessionId] = useState<number | null>(null);
   const [showBlockModal, setShowBlockModal] = useState(false);
-  const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs para botões e menus de ações, indexados por session.id
+  const menuButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const menuDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ day: string; time: string } | null>(null);
   const [dragState, setDragState] = useState<DragState>({
@@ -246,10 +248,21 @@ const Calendar: React.FC = () => {
 
   const getBlockColor = (type: string) => {
     switch (type) {
-      case 'lunch': return '#F4A261';
+      case 'lunch': return '#8390FA'; // azul lavanda
       case 'study': return '#6C757D';
       case 'meeting': return '#E76F51';
+      case 'blocked': return '#ADB5BD';
       default: return '#DEE2E6';
+    }
+  };
+
+  const getBlockBackground = (type: string) => {
+    switch (type) {
+      case 'lunch': return 'rgba(131, 144, 250, 0.13)'; // azul lavanda
+      case 'study': return 'rgba(108, 117, 125, 0.13)'; // cinza escuro
+      case 'meeting': return 'rgba(231, 111, 81, 0.13)'; // terracota
+      case 'blocked': return 'rgba(173, 181, 189, 0.18)'; // cinza claro
+      default: return 'rgba(222, 226, 230, 0.15)'; // fallback
     }
   };
 
@@ -265,14 +278,14 @@ const Calendar: React.FC = () => {
       newDay: '',
       newTime: ''
     });
-    setHoveredSession(null); // Always clear hover on drag cancel
+
   };
 
   // Drag and drop functions
   const handleMouseDown = (e: React.MouseEvent, session: Session) => {
     e.preventDefault();
     e.stopPropagation();
-    setHoveredSession(null); // Always clear hover on drag start
+    (null); // Always clear hover on drag start
     // Calculate offset between mouse and top of card
     const cardRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const cardOffsetY = e.clientY - cardRect.top;
@@ -291,9 +304,10 @@ const Calendar: React.FC = () => {
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    setMousePosition({ x: e.clientX, y: e.clientY });
+
+    // Mantém apenas lógica de drag, sem hover antigo
     if (dragState.isDragging) {
-      setHoveredSession(null); // Always clear hover during drag
+      // Nenhuma ação extra
     }
     if (dragState.isDragging && calendarRef.current) {
       const rect = calendarRef.current.getBoundingClientRect();
@@ -310,7 +324,8 @@ const Calendar: React.FC = () => {
       
       // Ajuste: header mais alto para alinhar com 7:00
       const headerHeight = 80;
-      const calendarHeight = rect.height - headerHeight;
+      // Novo valor fixo para altura do calendário
+      const calendarHeight = 960;
       const relativeCalendarY = Math.max(0, relativeY - headerHeight);
       
       // CORREÇÃO CRÍTICA: Cálculo mais preciso do tempo
@@ -452,7 +467,7 @@ const Calendar: React.FC = () => {
           <div className="flex rounded-lg p-1" style={{ backgroundColor: '#F8F9FA' }}>
             <button
               onClick={() => setViewMode('weekly')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'weekly' 
                   ? 'bg-white shadow-sm' 
                   : 'hover:bg-gray-200'
@@ -465,7 +480,7 @@ const Calendar: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('monthly')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'monthly' 
                   ? 'bg-white shadow-sm' 
                   : 'hover:bg-gray-200'
@@ -503,7 +518,7 @@ const Calendar: React.FC = () => {
         </div>
         
         <button 
-          className="px-4 py-2 rounded-lg text-white transition-colors"
+          className="px-3 py-2 rounded-lg text-white transition-colors"
           style={{ backgroundColor: '#347474' }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = '#2d6363';
@@ -519,7 +534,7 @@ const Calendar: React.FC = () => {
       {/* Calendar Grid */}
       <div 
         ref={calendarRef}
-        className="bg-white rounded-xl shadow-sm overflow-hidden" 
+        className="bg-white rounded-xl shadow-sm overflow-visible" 
         style={{ border: '1px solid #DEE2E6' }}
       >
         {/* Header with days and workload indicators */}
@@ -546,7 +561,7 @@ const Calendar: React.FC = () => {
         </div>
 
         {/* Time slots with absolute positioned sessions */}
-        <div className="relative" style={{ height: '720px' }}>
+        <div className="relative" style={{ height: '960px' }}>
           {/* Time labels */}
           <div className="absolute left-0 top-0 bottom-0" style={{ width: '120px', zIndex: 10 }}>
             {timeSlots.map((time, index) => (
@@ -602,8 +617,24 @@ const Calendar: React.FC = () => {
                     const position = getSessionPosition(session);
                     const isDragging = dragState.isDragging && dragState.sessionId === session.id;
                     const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
-                    const isHovered = hoveredSession === session.id;
-                    
+                    // Cor única: verde se pago, laranja se pendente
+                    const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
+                    const sessionTypeIcon = <SessionIcon size={18} style={{ color: iconColor }} />;
+                    const isMenuOpen = actionMenuSessionId === session.id;
+
+                    // Novo handleMouseDown: só inicia drag se não for clique no menu ou no botão
+                    const handleCardMouseDown = (e: React.MouseEvent) => {
+                      const btn = menuButtonRefs.current[session.id];
+                      const menu = menuDropdownRefs.current[session.id];
+                      if (
+                        btn?.contains(e.target as Node) ||
+                        menu?.contains(e.target as Node)
+                      ) {
+                        return;
+                      }
+                      handleMouseDown(e, session);
+                    };
+
                     return (
                       <div
                         key={session.id}
@@ -615,69 +646,90 @@ const Calendar: React.FC = () => {
                         }}
                       >
                         <div
-                          className="h-full p-2 rounded-lg cursor-move transition-all duration-200 border-l-4 shadow-sm"
+                          className="h-full p-2 rounded-lg cursor-move transition-all duration-200 border-l-4 shadow-sm group"
                           style={{
-                            backgroundColor: session.status === 'confirmado' ? 'rgba(52, 116, 116, 0.1)' : 'rgba(244, 162, 97, 0.1)',
-                            borderLeftColor: session.status === 'confirmado' ? '#347474' : '#F4A261',
-                            border: isDragging ? '2px dashed #347474' : undefined,
-                            // Hover effects - IMMEDIATE, NO TIMER
-                            transform: isHovered && !isDragging ? 'translateY(-2px)' : 'translateY(0)',
-                            boxShadow: isHovered && !isDragging 
-                              ? '0 8px 25px rgba(0, 0, 0, 0.15)' 
-                              : isDragging 
-                                ? '0 4px 12px rgba(0, 0, 0, 0.1)' 
-                                : '0 2px 4px rgba(0, 0, 0, 0.05)',
-                            cursor: isDragging ? 'grabbing' : 'grab'
+                            backgroundColor: session.paymentStatus === 'pago' ? 'rgba(52, 116, 116, 0.13)' : 'rgba(244, 162, 97, 0.13)',
+                            borderLeftColor: session.paymentStatus === 'pago' ? '#347474' : '#F4A261',
+                            ...(isDragging ? { boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' } : {}),
+                            cursor: isDragging ? 'grabbing' : 'grab',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            height: '100%'
                           }}
-                          onMouseDown={(e) => handleMouseDown(e, session)}
-                          onMouseEnter={e => {
-                            if (!dragState.isDragging) {
-                              // IMMEDIATE hover effect for animation
-                              setHoveredSession(session.id);
-                              
-                              // Clear any existing timer
-                              if (hoverTimerRef.current) {
-                                clearTimeout(hoverTimerRef.current);
-                              }
-                              // Set a new timer ONLY for the popover
-                              hoverTimerRef.current = setTimeout(() => {
-                                setMousePosition({ x: e.clientX, y: e.clientY });
-                              }, 1000); // 1 second delay for popover
-                            }
-                          }}
-                          onMouseMove={e => {
-                            if (!dragState.isDragging && hoveredSession === session.id) {
-                              setMousePosition({ x: e.clientX, y: e.clientY });
-                            }
-                          }}
-                          onMouseLeave={e => {
-                            // Clear the timer if mouse leaves before delay completes
-                            if (hoverTimerRef.current) {
-                              clearTimeout(hoverTimerRef.current);
-                              hoverTimerRef.current = null;
-                            }
-                            setHoveredSession(null);
-                          }}
+                          onMouseDown={handleCardMouseDown}
                         >
-                          {/* Session header */}
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center space-x-1">
-                              <SessionIcon size={12} style={{ color: session.sessionType === 'online' ? '#347474' : '#F4A261' }} />
-                              <span className="text-xs font-medium" style={{ color: '#343A40' }}>
-                                {session.startTime} - {session.endTime}
-                              </span>
-                            </div>
-                            <span className="text-xs" style={{ color: '#6C757D' }}>
+                          {/* Linha 1: Status e Tempo */}
+                          <div className="flex items-center mb-0.5 w-full">
+                            <span className="flex items-center">
+                              {sessionTypeIcon}
+                            </span>
+                            <span className="flex-1 text-xs font-medium text-center" style={{ color: '#343A40' }}>
+                              {session.startTime} - {session.endTime}
+                            </span>
+                            <span className="text-xs text-right" style={{ color: '#6C757D', minWidth: 50 }}>
                               ({session.duration}min)
                             </span>
                           </div>
-                          
-                          {/* Client name */}
-                          <div className="font-medium text-sm mb-1" style={{ color: '#343A40' }}>
-                            {session.client}
-                          </div>
-                          
 
+                          {/* Linha 2: Cliente e Ações */}
+                          <div className="flex items-center justify-between mt-0.5">
+                            <div className="font-medium text-sm truncate" style={{ color: '#343A40', maxWidth: '70%' }}>
+                              {session.client}
+                            </div>
+                            <div className="relative flex items-center">
+                              <button
+                                ref={el => (menuButtonRefs.current[session.id] = el)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-full hover:bg-gray-100"
+                                style={{ color: '#6C757D' }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setActionMenuSessionId(session.id === actionMenuSessionId ? null : session.id);
+                                }}
+                              >
+                                <MoreHorizontal size={18} />
+                              </button>
+                              {/* Menu de ações */}
+                              {isMenuOpen && (
+                                <div
+                                  ref={el => (menuDropdownRefs.current[session.id] = el)}
+                                  className="absolute right-0 bottom-8 bg-white rounded-lg shadow-xl border z-50 min-w-[210px]"
+                                  style={{ border: '1px solid #DEE2E6' }}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <button
+                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                    style={{ color: '#343A40' }}
+                                    onClick={() => {/* TODO: Navegar para /clients/{id} */ setActionMenuSessionId(null); }}
+                                  >
+                                    <BookOpen size={16} className="mr-2" /> Ver Prontuário
+                                  </button>
+                                  <button
+                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                    style={{ color: '#343A40' }}
+                                    onClick={() => {/* TODO: Abrir modal de edição */ setActionMenuSessionId(null); }}
+                                  >
+                                    <Clock size={16} className="mr-2" /> Editar Horário
+                                  </button>
+                                  <button
+                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                    style={{ color: '#347474' }}
+                                    onClick={() => {/* TODO: Marcar como pago */ setActionMenuSessionId(null); }}
+                                  >
+                                    <DollarSign size={16} className="mr-2" /> Registrar Pagamento
+                                  </button>
+                                  <div className="border-t my-1 border-gray-200" />
+                                  <button
+                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50"
+                                    style={{ color: '#E76F51' }}
+                                    onClick={() => {/* TODO: Cancelar sessão */ setActionMenuSessionId(null); }}
+                                  >
+                                    <Trash2 size={16} className="mr-2" /> Cancelar Sessão
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
@@ -709,7 +761,7 @@ const Calendar: React.FC = () => {
                         <div
                           className="h-full p-2 rounded-lg border-l-4"
                           style={{
-                            backgroundColor: `${getBlockColor(block.type)}20`,
+                            backgroundColor: getBlockBackground(block.type),
                             borderLeftColor: getBlockColor(block.type)
                           }}
                         >
@@ -729,64 +781,7 @@ const Calendar: React.FC = () => {
         </div>
       </div>
 
-      {/* Session Popover - Only shows after timer delay */}
-      {hoveredSession && !dragState.isDragging && (
-        <div 
-          className="fixed z-50 bg-white rounded-lg shadow-xl p-4 max-w-sm"
-          style={{ 
-            left: mousePosition.x + 10,
-            top: mousePosition.y - 100,
-            border: '1px solid #DEE2E6'
-          }}
-        >
-          {(() => {
-            const session = sessions.find(s => s.id === hoveredSession);
-            if (!session) return null;
-            
-            return (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold" style={{ color: '#343A40' }}>{session.client}</h4>
-                  <div className="flex items-center space-x-1">
-                    <span 
-                      className="px-2 py-1 rounded-full text-xs font-medium"
-                      style={{ 
-                        backgroundColor: session.sessionType === 'online' ? 'rgba(52, 116, 116, 0.1)' : 'rgba(244, 162, 97, 0.1)',
-                        color: session.sessionType === 'online' ? '#347474' : '#F4A261'
-                      }}
-                    >
-                      {session.sessionType === 'online' ? 'Online' : 'Presencial'}
-                    </span>
-                    <span 
-                      className="px-2 py-1 rounded-full text-xs font-medium"
-                      style={{ 
-                        backgroundColor: session.paymentStatus === 'pago' ? 'rgba(52, 116, 116, 0.1)' : 'rgba(244, 162, 97, 0.1)',
-                        color: session.paymentStatus === 'pago' ? '#347474' : '#F4A261'
-                      }}
-                    >
-                      {session.paymentStatus === 'pago' ? 'Pago' : 'Pendente'}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-sm mb-2" style={{ color: '#6C757D' }}>{session.clientEmail}</p>
-                <p className="text-sm mb-3" style={{ color: '#6C757D' }}>{session.notes}</p>
-                <button 
-                  className="w-full px-3 py-2 rounded-lg text-white transition-colors text-sm"
-                  style={{ backgroundColor: '#347474' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2d6363';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#347474';
-                  }}
-                >
-                  Ver Prontuário
-                </button>
-              </>
-            );
-          })()}
-        </div>
-      )}
+
 
       {/* Drag Preview - Only show when actively dragging */}
       {dragState.isDragging && (
@@ -798,8 +793,11 @@ const Calendar: React.FC = () => {
           }}
         >
           <div className="bg-white rounded-lg shadow-xl p-3 border-l-4 border-2 border-dashed min-w-[200px]" style={{ // Reduced from 240px
-            borderColor: '#347474',
-            borderLeftColor: getDraggedSession()?.status === 'confirmado' ? '#347474' : '#F4A261'
+            backgroundColor: getDraggedSession()?.paymentStatus === 'pago'
+              ? 'rgba(52, 116, 116, 0.13)'
+              : 'rgba(244, 162, 97, 0.13)',
+            borderColor: getDraggedSession()?.paymentStatus === 'pago' ? '#347474' : '#F4A261',
+            borderLeftColor: getDraggedSession()?.paymentStatus === 'pago' ? '#347474' : '#F4A261'
           }}>
             {(() => {
               const session = getDraggedSession();
@@ -854,7 +852,7 @@ const Calendar: React.FC = () => {
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelReschedule}
-                className="px-4 py-2 rounded-lg transition-colors hover:bg-gray-50"
+                className="px-3 py-2 rounded-lg transition-colors hover:bg-gray-50"
                 style={{ 
                   color: '#343A40',
                   border: '1px solid #DEE2E6'
@@ -864,7 +862,7 @@ const Calendar: React.FC = () => {
               </button>
               <button
                 onClick={confirmReschedule}
-                className="px-4 py-2 rounded-lg text-white transition-colors"
+                className="px-3 py-2 rounded-lg text-white transition-colors"
                 style={{ backgroundColor: '#347474' }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#2d6363';
@@ -939,29 +937,70 @@ const Calendar: React.FC = () => {
         </div>
       )}
 
+      {/* Legenda do ícone de sessão */}
+      <div className="mt-6 flex items-center gap-8 text-xs text-gray-500" style={{ fontSize: 13 }}>
+        <span className="flex items-center gap-1">
+          <Video size={16} style={{ color: '#347474' }} />
+          <MapPin size={16} style={{ color: '#347474' }} />
+          <span className="ml-1">= Pago</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <Video size={16} style={{ color: '#F4A261' }} />
+          <MapPin size={16} style={{ color: '#F4A261' }} />
+          <span className="ml-1">= Pagamento pendente</span>
+        </span>
+      </div>
+
       {/* Legend */}
-      <div className="mt-6 flex items-center justify-between">
+      <div className="mt-3 flex items-center justify-between">
         <div className="flex items-center space-x-6">
+          {/* Sessão Confirmada/Paga */}
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-sm border-l-4" style={{ 
-              backgroundColor: 'rgba(52, 116, 116, 0.1)',
+            <div className="w-4 h-4 rounded-sm border-l-4" style={{
+              backgroundColor: '#FFF',
               borderLeftColor: '#347474'
             }}></div>
-            <span className="text-sm" style={{ color: '#6C757D' }}>Confirmado</span>
+            <span className="text-sm" style={{ color: '#6C757D' }}>Sessão Confirmada/Paga</span>
           </div>
+          {/* Sessão Pendente */}
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-sm border-l-4" style={{ 
-              backgroundColor: 'rgba(244, 162, 97, 0.1)',
+            <div className="w-4 h-4 rounded-sm border-l-4" style={{
+              backgroundColor: '#FFF',
               borderLeftColor: '#F4A261'
             }}></div>
-            <span className="text-sm" style={{ color: '#6C757D' }}>Pendente</span>
+            <span className="text-sm" style={{ color: '#6C757D' }}>Sessão Pendente</span>
           </div>
+          {/* Bloqueado */}
           <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-sm border-l-4" style={{ 
-              backgroundColor: 'rgba(108, 117, 125, 0.2)',
-              borderLeftColor: '#6C757D'
+            <div className="w-4 h-4 rounded-sm border-l-4" style={{
+              backgroundColor: getBlockBackground('blocked'),
+              borderLeftColor: getBlockColor('blocked')
             }}></div>
             <span className="text-sm" style={{ color: '#6C757D' }}>Bloqueado</span>
+          </div>
+          {/* Almoço */}
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 rounded-sm border-l-4" style={{
+              backgroundColor: getBlockBackground('lunch'),
+              borderLeftColor: getBlockColor('lunch')
+            }}></div>
+            <span className="text-sm" style={{ color: '#6C757D' }}>Almoço</span>
+          </div>
+          {/* Reunião */}
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 rounded-sm border-l-4" style={{
+              backgroundColor: getBlockBackground('meeting'),
+              borderLeftColor: getBlockColor('meeting')
+            }}></div>
+            <span className="text-sm" style={{ color: '#6C757D' }}>Reunião</span>
+          </div>
+          {/* Estudo */}
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 rounded-sm border-l-4" style={{
+              backgroundColor: getBlockBackground('study'),
+              borderLeftColor: getBlockColor('study')
+            }}></div>
+            <span className="text-sm" style={{ color: '#6C757D' }}>Estudo</span>
           </div>
         </div>
       </div>
