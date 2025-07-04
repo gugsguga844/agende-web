@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Clock, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal, Plus, ChevronDown, Palette, Smile } from 'lucide-react';
 
 interface Session {
   id: number;
@@ -13,6 +13,18 @@ interface Session {
   sessionType: 'online' | 'presencial';
   paymentStatus: 'pago' | 'pendente';
   notes: string;
+}
+
+interface TimeBlock {
+  id: number;
+  day: string;
+  time: string;
+  endTime: string;
+  type: string;
+  title: string;
+  duration: string;
+  color?: string;
+  emoji?: string;
 }
 
 interface DragState {
@@ -30,14 +42,23 @@ interface DragState {
 const Calendar: React.FC = () => {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [viewMode, setViewMode] = useState('weekly');
-  // Novo controle para menu de ações
   const [actionMenuSessionId, setActionMenuSessionId] = useState<number | null>(null);
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
-  // Refs para botões e menus de ações, indexados por session.id
-  const menuButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
-  const menuDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ day: string; time: string } | null>(null);
+  const [blockForm, setBlockForm] = useState({
+    title: '',
+    startTime: '',
+    endTime: '',
+    color: '#8390FA',
+    emoji: ''
+  });
+
+  const menuButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const menuDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const createMenuRef = useRef<HTMLDivElement>(null);
+  
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
     sessionId: null,
@@ -146,33 +167,42 @@ const Calendar: React.FC = () => {
     }
   ]);
 
-  // Bloqueios de tempo
-  const timeBlocks = [
+  // Bloqueios de tempo com cores personalizadas
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([
     {
       id: 1,
       day: 'monday',
       time: '12:00',
+      endTime: '13:00',
       type: 'lunch',
       title: 'Almoço',
-      duration: '60min'
+      duration: '60min',
+      color: '#8390FA',
+      emoji: '🍽️'
     },
     {
       id: 2,
       day: 'wednesday',
       time: '13:00',
+      endTime: '14:00',
       type: 'meeting',
       title: 'Reunião de Equipe',
-      duration: '60min'
+      duration: '60min',
+      color: '#E76F51',
+      emoji: '👥'
     },
     {
       id: 3,
       day: 'friday',
       time: '16:00',
+      endTime: '18:00',
       type: 'study',
       title: 'Estudo/Atualização',
-      duration: '120min'
+      duration: '120min',
+      color: '#6C757D',
+      emoji: '📚'
     }
-  ];
+  ]);
 
   const weekDays = [
     { key: 'monday', label: 'Segunda', date: '15/01' },
@@ -187,6 +217,18 @@ const Calendar: React.FC = () => {
     const hour = 7 + i;
     return `${hour.toString().padStart(2, '0')}:00`;
   });
+
+  // Cores predefinidas para bloqueios
+  const predefinedColors = [
+    '#8390FA', // Azul lavanda
+    '#E76F51', // Terracota
+    '#6C757D', // Cinza
+    '#F4A261', // Laranja
+    '#2A9D8F', // Verde água
+    '#E9C46A', // Amarelo
+    '#264653', // Verde escuro
+    '#F72585'  // Rosa
+  ];
 
   // Utility functions
   const timeToMinutes = (timeString: string): number => {
@@ -222,6 +264,23 @@ const Calendar: React.FC = () => {
     return { top: `${top}%`, height: `${height}%` };
   };
 
+  // Calculate position for time blocks
+  const getBlockPosition = (block: TimeBlock) => {
+    const startMinutes = timeToMinutes(block.time);
+    const endMinutes = timeToMinutes(block.endTime);
+    const dayStartMinutes = workingHours.start * 60;
+    const dayEndMinutes = workingHours.end * 60;
+    const totalDayMinutes = dayEndMinutes - dayStartMinutes;
+    
+    const relativeStartMinutes = startMinutes - dayStartMinutes;
+    const blockDurationMinutes = endMinutes - startMinutes;
+    
+    const top = (relativeStartMinutes / totalDayMinutes) * 100;
+    const height = (blockDurationMinutes / totalDayMinutes) * 100;
+    
+    return { top: `${top}%`, height: `${height}%` };
+  };
+
   // Get sessions for a specific day
   const getSessionsForDay = (day: string) => {
     return sessions.filter(session => session.day === day);
@@ -231,39 +290,9 @@ const Calendar: React.FC = () => {
     return timeBlocks.filter(block => block.day === day);
   };
 
-  
   const isWorkingHour = (timeString: string) => {
     const hour = parseInt(timeString.split(':')[0]);
     return hour >= workingHours.start && hour < workingHours.end;
-  };
-
-  const getBlockIcon = (type: string) => {
-    switch (type) {
-      case 'lunch': return Coffee;
-      case 'study': return BookOpen;
-      case 'meeting': return UsersIcon;
-      default: return Clock;
-    }
-  };
-
-  const getBlockColor = (type: string) => {
-    switch (type) {
-      case 'lunch': return '#8390FA'; // azul lavanda
-      case 'study': return '#6C757D';
-      case 'meeting': return '#E76F51';
-      case 'blocked': return '#ADB5BD';
-      default: return '#DEE2E6';
-    }
-  };
-
-  const getBlockBackground = (type: string) => {
-    switch (type) {
-      case 'lunch': return 'rgba(131, 144, 250, 0.13)'; // azul lavanda
-      case 'study': return 'rgba(108, 117, 125, 0.13)'; // cinza escuro
-      case 'meeting': return 'rgba(231, 111, 81, 0.13)'; // terracota
-      case 'blocked': return 'rgba(173, 181, 189, 0.18)'; // cinza claro
-      default: return 'rgba(222, 226, 230, 0.15)'; // fallback
-    }
   };
 
   // Reset drag state completely
@@ -278,14 +307,13 @@ const Calendar: React.FC = () => {
       newDay: '',
       newTime: ''
     });
-
   };
 
   // Drag and drop functions
   const handleMouseDown = (e: React.MouseEvent, session: Session) => {
     e.preventDefault();
     e.stopPropagation();
-    (null); // Always clear hover on drag start
+    
     // Calculate offset between mouse and top of card
     const cardRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const cardOffsetY = e.clientY - cardRect.top;
@@ -304,36 +332,25 @@ const Calendar: React.FC = () => {
   };
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
-
-    // Mantém apenas lógica de drag, sem hover antigo
-    if (dragState.isDragging) {
-      // Nenhuma ação extra
-    }
     if (dragState.isDragging && calendarRef.current) {
       const rect = calendarRef.current.getBoundingClientRect();
       const relativeX = e.clientX - rect.left;
-      // Use offset if present, fallback to 0 for safety
       const offsetY = dragState.cardOffsetY ?? 0;
       const relativeY = e.clientY - offsetY - rect.top;
       
-      // CORREÇÃO: Usar largura exata da coluna de horário (120px)
       const timeColumnWidth = 120;
       const dayWidth = (rect.width - timeColumnWidth) / 5;
       const dayIndex = Math.floor((relativeX - timeColumnWidth) / dayWidth);
       const newDay = weekDays[dayIndex]?.key || dragState.originalDay;
       
-      // Ajuste: header mais alto para alinhar com 7:00
       const headerHeight = 80;
-      // Novo valor fixo para altura do calendário
       const calendarHeight = 960;
       const relativeCalendarY = Math.max(0, relativeY - headerHeight);
       
-      // CORREÇÃO CRÍTICA: Cálculo mais preciso do tempo
-      const totalDayMinutes = (workingHours.end - workingHours.start) * 60; // 12 horas * 60 minutos
+      const totalDayMinutes = (workingHours.end - workingHours.start) * 60;
       const minutesFromStart = (relativeCalendarY / calendarHeight) * totalDayMinutes;
       const absoluteMinutes = workingHours.start * 60 + minutesFromStart;
       
-      // Snap to 5-minute intervals e garantir limites
       const snappedMinutes = snapToGrid(Math.max(workingHours.start * 60, Math.min(workingHours.end * 60 - 30, absoluteMinutes)));
       const newTime = minutesToTime(snappedMinutes);
       
@@ -348,19 +365,16 @@ const Calendar: React.FC = () => {
 
   const handleMouseUp = useCallback(() => {
     if (dragState.isDragging) {
-      // CRITICAL FIX: Remove event listeners IMMEDIATELY when mouse is released
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       
       if (dragState.newDay !== dragState.originalDay || dragState.newTime !== dragState.originalTime) {
-        // Stop dragging but keep the drag data for the modal
         setDragState(prev => ({
           ...prev,
-          isDragging: false // STOP DRAGGING IMMEDIATELY
+          isDragging: false
         }));
         setShowConfirmModal(true);
       } else {
-        // No change, reset everything
         resetDragState();
       }
     }
@@ -392,12 +406,43 @@ const Calendar: React.FC = () => {
           setShowConfirmModal(false);
           resetDragState();
         }
+        if (actionMenuSessionId) {
+          setActionMenuSessionId(null);
+        }
+        if (showCreateMenu) {
+          setShowCreateMenu(false);
+        }
+        if (showBlockModal) {
+          setShowBlockModal(false);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [dragState.isDragging, showConfirmModal, handleMouseMove, handleMouseUp]);
+  }, [dragState.isDragging, showConfirmModal, actionMenuSessionId, showCreateMenu, showBlockModal, handleMouseMove, handleMouseUp]);
+
+  // Close menus when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (actionMenuSessionId) {
+        const menu = menuDropdownRefs.current[actionMenuSessionId];
+        const button = menuButtonRefs.current[actionMenuSessionId];
+        
+        if (menu && !menu.contains(e.target as Node) && 
+            button && !button.contains(e.target as Node)) {
+          setActionMenuSessionId(null);
+        }
+      }
+
+      if (showCreateMenu && createMenuRef.current && !createMenuRef.current.contains(e.target as Node)) {
+        setShowCreateMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [actionMenuSessionId, showCreateMenu]);
 
   const confirmReschedule = () => {
     if (dragState.sessionId) {
@@ -435,19 +480,57 @@ const Calendar: React.FC = () => {
       return clickTime >= sessionStart && clickTime < sessionEnd;
     });
     
-    const existingBlock = getBlocksForDay(day).find(b => b.time === time);
+    const existingBlock = getBlocksForDay(day).find(b => {
+      const blockStart = timeToMinutes(b.time);
+      const blockEnd = timeToMinutes(b.endTime);
+      const clickTime = timeToMinutes(time);
+      return clickTime >= blockStart && clickTime < blockEnd;
+    });
     
     if (!existingSession && !existingBlock) {
       setSelectedTimeSlot({ day, time });
+      setBlockForm({
+        title: '',
+        startTime: time,
+        endTime: minutesToTime(timeToMinutes(time) + 60), // Default 1 hour
+        color: '#8390FA',
+        emoji: ''
+      });
       setShowBlockModal(true);
     }
+  };
+
+  const handleCreateBlock = () => {
+    if (!selectedTimeSlot || !blockForm.title.trim()) return;
+
+    const newBlock: TimeBlock = {
+      id: Date.now(),
+      day: selectedTimeSlot.day,
+      time: blockForm.startTime,
+      endTime: blockForm.endTime,
+      type: 'custom',
+      title: blockForm.title,
+      duration: `${timeToMinutes(blockForm.endTime) - timeToMinutes(blockForm.startTime)}min`,
+      color: blockForm.color,
+      emoji: blockForm.emoji
+    };
+
+    setTimeBlocks(prev => [...prev, newBlock]);
+    setShowBlockModal(false);
+    setSelectedTimeSlot(null);
+    setBlockForm({
+      title: '',
+      startTime: '',
+      endTime: '',
+      color: '#8390FA',
+      emoji: ''
+    });
   };
 
   const getDraggedSession = () => {
     return sessions.find(s => s.id === dragState.sessionId);
   };
 
-  // Calculate new end time for dragged session
   const getDraggedSessionNewEndTime = () => {
     const session = getDraggedSession();
     if (!session) return '';
@@ -517,18 +600,86 @@ const Calendar: React.FC = () => {
           </button>
         </div>
         
-        <button 
-          className="px-3 py-2 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#347474' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#2d6363';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#347474';
-          }}
-        >
-          Novo Agendamento
-        </button>
+        {/* Novo Botão Unificado */}
+        <div className="relative" ref={createMenuRef}>
+          <div className="flex">
+            <button 
+              onClick={() => console.log('Agendar Sessão')}
+              className="px-4 py-2 rounded-l-lg text-white transition-colors"
+              style={{ backgroundColor: '#347474' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#2d6363';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#347474';
+              }}
+            >
+              <Plus size={20} className="inline mr-2" />
+              Novo
+            </button>
+            <button
+              onClick={() => setShowCreateMenu(!showCreateMenu)}
+              className="px-3 py-2 rounded-r-lg text-white transition-colors border-l border-white border-opacity-20"
+              style={{ backgroundColor: '#347474' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#2d6363';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#347474';
+              }}
+            >
+              <ChevronDown size={16} />
+            </button>
+          </div>
+
+          {/* Menu Dropdown */}
+          {showCreateMenu && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50" style={{ border: '1px solid #DEE2E6' }}>
+              <div className="py-2">
+                <button
+                  onClick={() => {
+                    console.log('Agendar Sessão');
+                    setShowCreateMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
+                  style={{ color: '#343A40' }}
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(52, 116, 116, 0.1)' }}>
+                    <Clock size={16} style={{ color: '#347474' }} />
+                  </div>
+                  <div>
+                    <div className="font-medium">Agendar Sessão</div>
+                    <div className="text-xs" style={{ color: '#6C757D' }}>Criar agendamento com cliente</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedTimeSlot({ day: 'monday', time: '09:00' });
+                    setBlockForm({
+                      title: '',
+                      startTime: '09:00',
+                      endTime: '10:00',
+                      color: '#8390FA',
+                      emoji: ''
+                    });
+                    setShowBlockModal(true);
+                    setShowCreateMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
+                  style={{ color: '#343A40' }}
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(131, 144, 250, 0.1)' }}>
+                    <X size={16} style={{ color: '#8390FA' }} />
+                  </div>
+                  <div>
+                    <div className="font-medium">Bloquear Horário</div>
+                    <div className="text-xs" style={{ color: '#6C757D' }}>Criar bloqueio personalizado</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Calendar Grid */}
@@ -537,7 +688,7 @@ const Calendar: React.FC = () => {
         className="bg-white rounded-xl shadow-sm overflow-visible" 
         style={{ border: '1px solid #DEE2E6' }}
       >
-        {/* Header with days and workload indicators */}
+        {/* Header with days */}
         <div className="grid" style={{ 
           gridTemplateColumns: '120px repeat(5, 1fr)',
           borderBottom: '1px solid #DEE2E6' 
@@ -546,18 +697,18 @@ const Calendar: React.FC = () => {
             <span className="text-sm font-medium" style={{ color: '#6C757D' }}>Horário</span>
           </div>
           {weekDays.map((day, index) => (
-  <div
-    key={day.key}
-    className="p-4 text-center"
-    style={{
-      backgroundColor: '#F8F9FA',
-      borderRight: index < weekDays.length - 1 ? '1px solid #DEE2E6' : 'none',
-    }}
-  >
-    <div className="font-semibold" style={{ color: '#343A40' }}>{day.label}</div>
-    <div className="text-sm" style={{ color: '#6C757D' }}>{day.date}</div>
-  </div>
-))}
+            <div
+              key={day.key}
+              className="p-4 text-center"
+              style={{
+                backgroundColor: '#F8F9FA',
+                borderRight: index < weekDays.length - 1 ? '1px solid #DEE2E6' : 'none',
+              }}
+            >
+              <div className="font-semibold" style={{ color: '#343A40' }}>{day.label}</div>
+              <div className="text-sm" style={{ color: '#6C757D' }}>{day.date}</div>
+            </div>
+          ))}
         </div>
 
         {/* Time slots with absolute positioned sessions */}
@@ -617,12 +768,9 @@ const Calendar: React.FC = () => {
                     const position = getSessionPosition(session);
                     const isDragging = dragState.isDragging && dragState.sessionId === session.id;
                     const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
-                    // Cor única: verde se pago, laranja se pendente
                     const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
-                    const sessionTypeIcon = <SessionIcon size={18} style={{ color: iconColor }} />;
                     const isMenuOpen = actionMenuSessionId === session.id;
 
-                    // Novo handleMouseDown: só inicia drag se não for clique no menu ou no botão
                     const handleCardMouseDown = (e: React.MouseEvent) => {
                       const btn = menuButtonRefs.current[session.id];
                       const menu = menuDropdownRefs.current[session.id];
@@ -642,15 +790,14 @@ const Calendar: React.FC = () => {
                         style={{
                           top: position.top,
                           height: position.height,
-                          zIndex: isDragging ? 50 : 20
+                          zIndex: isDragging ? 50 : isMenuOpen ? 30 : 20
                         }}
                       >
                         <div
-                          className="h-full p-2 rounded-lg cursor-move transition-all duration-200 border-l-4 shadow-sm group"
+                          className="h-full p-2 rounded-lg cursor-move transition-all duration-200 border-l-4 shadow-sm group hover:shadow-md hover:-translate-y-0.5"
                           style={{
                             backgroundColor: session.paymentStatus === 'pago' ? 'rgba(52, 116, 116, 0.13)' : 'rgba(244, 162, 97, 0.13)',
                             borderLeftColor: session.paymentStatus === 'pago' ? '#347474' : '#F4A261',
-                            ...(isDragging ? { boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)' } : {}),
                             cursor: isDragging ? 'grabbing' : 'grab',
                             display: 'flex',
                             flexDirection: 'column',
@@ -659,70 +806,81 @@ const Calendar: React.FC = () => {
                           }}
                           onMouseDown={handleCardMouseDown}
                         >
-                          {/* Linha 1: Status e Tempo */}
-                          <div className="flex items-center mb-0.5 w-full">
-                            <span className="flex items-center">
-                              {sessionTypeIcon}
-                            </span>
-                            <span className="flex-1 text-xs font-medium text-center" style={{ color: '#343A40' }}>
+                          {/* Linha 1: Ícone, Tempo e Duração */}
+                          <div className="flex items-center justify-between mb-0.5 w-full">
+                            <SessionIcon size={16} style={{ color: iconColor }} />
+                            <span className="text-xs font-medium text-center flex-1 mx-1" style={{ color: '#343A40' }}>
                               {session.startTime} - {session.endTime}
                             </span>
-                            <span className="text-xs text-right" style={{ color: '#6C757D', minWidth: 50 }}>
+                            <span className="text-xs" style={{ color: '#6C757D' }}>
                               ({session.duration}min)
                             </span>
                           </div>
 
-                          {/* Linha 2: Cliente e Ações */}
-                          <div className="flex items-center justify-between mt-0.5">
-                            <div className="font-medium text-sm truncate" style={{ color: '#343A40', maxWidth: '70%' }}>
+                          {/* Linha 2: Cliente e Menu */}
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium text-sm truncate flex-1" style={{ color: '#343A40' }}>
                               {session.client}
                             </div>
-                            <div className="relative flex items-center">
+                            <div className="relative">
                               <button
                                 ref={el => (menuButtonRefs.current[session.id] = el)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-full hover:bg-gray-100"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-full hover:bg-white/50 ml-1"
                                 style={{ color: '#6C757D' }}
                                 onClick={e => {
                                   e.stopPropagation();
                                   setActionMenuSessionId(session.id === actionMenuSessionId ? null : session.id);
                                 }}
                               >
-                                <MoreHorizontal size={18} />
+                                <MoreHorizontal size={16} />
                               </button>
+                              
                               {/* Menu de ações */}
                               {isMenuOpen && (
                                 <div
                                   ref={el => (menuDropdownRefs.current[session.id] = el)}
-                                  className="absolute right-0 bottom-8 bg-white rounded-lg shadow-xl border z-50 min-w-[210px]"
+                                  className="absolute right-0 bottom-8 bg-white rounded-lg shadow-xl border z-50 min-w-[200px]"
                                   style={{ border: '1px solid #DEE2E6' }}
                                   onClick={e => e.stopPropagation()}
                                 >
                                   <button
-                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
                                     style={{ color: '#343A40' }}
-                                    onClick={() => {/* TODO: Navegar para /clients/{id} */ setActionMenuSessionId(null); }}
+                                    onClick={() => {
+                                      console.log('Ver Prontuário');
+                                      setActionMenuSessionId(null);
+                                    }}
                                   >
                                     <BookOpen size={16} className="mr-2" /> Ver Prontuário
                                   </button>
                                   <button
                                     className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
                                     style={{ color: '#343A40' }}
-                                    onClick={() => {/* TODO: Abrir modal de edição */ setActionMenuSessionId(null); }}
+                                    onClick={() => {
+                                      console.log('Editar Horário');
+                                      setActionMenuSessionId(null);
+                                    }}
                                   >
                                     <Clock size={16} className="mr-2" /> Editar Horário
                                   </button>
                                   <button
                                     className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
                                     style={{ color: '#347474' }}
-                                    onClick={() => {/* TODO: Marcar como pago */ setActionMenuSessionId(null); }}
+                                    onClick={() => {
+                                      console.log('Registrar Pagamento');
+                                      setActionMenuSessionId(null);
+                                    }}
                                   >
                                     <DollarSign size={16} className="mr-2" /> Registrar Pagamento
                                   </button>
                                   <div className="border-t my-1 border-gray-200" />
                                   <button
-                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50"
+                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
                                     style={{ color: '#E76F51' }}
-                                    onClick={() => {/* TODO: Cancelar sessão */ setActionMenuSessionId(null); }}
+                                    onClick={() => {
+                                      console.log('Cancelar Sessão');
+                                      setActionMenuSessionId(null);
+                                    }}
                                   >
                                     <Trash2 size={16} className="mr-2" /> Cancelar Sessão
                                   </button>
@@ -737,36 +895,27 @@ const Calendar: React.FC = () => {
 
                   {/* Time blocks */}
                   {getBlocksForDay(day.key).map((block) => {
-                    const BlockIcon = getBlockIcon(block.type);
-                    const startMinutes = timeToMinutes(block.time);
-                    const duration = parseInt(block.duration.replace('min', ''));
-                    const dayStartMinutes = workingHours.start * 60;
-                    const dayEndMinutes = workingHours.end * 60;
-                    const totalDayMinutes = dayEndMinutes - dayStartMinutes;
-                    
-                    const relativeStartMinutes = startMinutes - dayStartMinutes;
-                    const top = (relativeStartMinutes / totalDayMinutes) * 100;
-                    const height = (duration / totalDayMinutes) * 100;
+                    const position = getBlockPosition(block);
                     
                     return (
                       <div
                         key={block.id}
                         className="absolute w-full px-1"
                         style={{
-                          top: `${top}%`,
-                          height: `${height}%`,
+                          top: position.top,
+                          height: position.height,
                           zIndex: 10
                         }}
                       >
                         <div
                           className="h-full p-2 rounded-lg border-l-4"
                           style={{
-                            backgroundColor: getBlockBackground(block.type),
-                            borderLeftColor: getBlockColor(block.type)
+                            backgroundColor: `${block.color}20`,
+                            borderLeftColor: block.color
                           }}
                         >
                           <div className="flex items-center space-x-1 mb-1">
-                            <BlockIcon size={12} style={{ color: getBlockColor(block.type) }} />
+                            {block.emoji && <span className="text-xs">{block.emoji}</span>}
                             <span className="text-xs" style={{ color: '#6C757D' }}>{block.duration}</span>
                           </div>
                           <div className="font-medium text-sm" style={{ color: '#343A40' }}>{block.title}</div>
@@ -781,18 +930,16 @@ const Calendar: React.FC = () => {
         </div>
       </div>
 
-
-
-      {/* Drag Preview - Only show when actively dragging */}
+      {/* Drag Preview */}
       {dragState.isDragging && (
         <div
           className="fixed z-50 pointer-events-none"
           style={{
-            left: dragState.currentPosition.x - 100, // Reduced from 120
+            left: dragState.currentPosition.x - 80,
             top: dragState.currentPosition.y - (dragState.cardOffsetY ?? 40)
           }}
         >
-          <div className="bg-white rounded-lg shadow-xl p-3 border-l-4 border-2 border-dashed min-w-[200px]" style={{ // Reduced from 240px
+          <div className="bg-white rounded-lg shadow-xl p-3 border-l-4 border-2 border-dashed min-w-[160px]" style={{
             backgroundColor: getDraggedSession()?.paymentStatus === 'pago'
               ? 'rgba(52, 116, 116, 0.13)'
               : 'rgba(244, 162, 97, 0.13)',
@@ -805,28 +952,24 @@ const Calendar: React.FC = () => {
               
               const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
               const newEndTime = getDraggedSessionNewEndTime();
+              const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
               
               return (
                 <>
-                  {/* Session header with updated times */}
                   <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center space-x-1">
-                      <SessionIcon size={12} style={{ color: session.sessionType === 'online' ? '#347474' : '#F4A261' }} />
-                      <span className="text-xs font-medium" style={{ color: '#343A40' }}>
-                        {dragState.newTime} - {newEndTime}
-                      </span>
-                    </div>
+                    <SessionIcon size={12} style={{ color: iconColor }} />
+                    <span className="text-xs font-medium text-center flex-1 mx-1" style={{ color: '#343A40' }}>
+                      {dragState.newTime} - {newEndTime}
+                    </span>
                     <span className="text-xs" style={{ color: '#6C757D' }}>
                       ({session.duration}min)
                     </span>
                   </div>
                   
-                  {/* Client name */}
                   <div className="font-medium text-sm mb-1" style={{ color: '#343A40' }}>
                     {session.client}
                   </div>
                   
-                  {/* Day indicator */}
                   <div className="text-xs" style={{ color: '#6C757D' }}>
                     {weekDays.find(d => d.key === dragState.newDay)?.label}
                   </div>
@@ -878,12 +1021,12 @@ const Calendar: React.FC = () => {
         </div>
       )}
 
-      {/* Block Creation Modal */}
-      {showBlockModal && selectedTimeSlot && (
+      {/* Novo Modal de Bloqueio de Tempo */}
+      {showBlockModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold" style={{ color: '#343A40' }}>
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold" style={{ color: '#343A40' }}>
                 Bloquear Horário
               </h3>
               <button
@@ -895,112 +1038,203 @@ const Calendar: React.FC = () => {
               </button>
             </div>
             
-            <p className="text-sm mb-4" style={{ color: '#6C757D' }}>
-              {weekDays.find(d => d.key === selectedTimeSlot.day)?.label} às {selectedTimeSlot.time}
-            </p>
-            
-            <div className="space-y-3">
-              <button 
-                onClick={() => setShowBlockModal(false)}
-                className="w-full p-3 rounded-lg text-left transition-colors hover:bg-gray-50"
-                style={{ border: '1px solid #DEE2E6' }}
-              >
-                <div className="flex items-center space-x-3">
-                  <Coffee size={20} style={{ color: '#F4A261' }} />
-                  <span style={{ color: '#343A40' }}>Almoço</span>
+            <form onSubmit={(e) => { e.preventDefault(); handleCreateBlock(); }} className="space-y-6">
+              {/* Título */}
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  Título do Bloqueio
+                </label>
+                <input
+                  id="title"
+                  type="text"
+                  value={blockForm.title}
+                  onChange={(e) => setBlockForm({ ...blockForm, title: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg transition-colors"
+                  style={{ 
+                    border: '1px solid #DEE2E6',
+                    color: '#343A40'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#347474';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#DEE2E6';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                  placeholder="Ex: Almoço, Supervisão, Foco Profundo..."
+                  required
+                />
+              </div>
+
+              {/* Horários */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="startTime" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                    Hora de Início
+                  </label>
+                  <input
+                    id="startTime"
+                    type="time"
+                    value={blockForm.startTime}
+                    onChange={(e) => setBlockForm({ ...blockForm, startTime: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    required
+                  />
                 </div>
-              </button>
-              
-              <button 
-                onClick={() => setShowBlockModal(false)}
-                className="w-full p-3 rounded-lg text-left transition-colors hover:bg-gray-50"
-                style={{ border: '1px solid #DEE2E6' }}
-              >
-                <div className="flex items-center space-x-3">
-                  <UsersIcon size={20} style={{ color: '#E76F51' }} />
-                  <span style={{ color: '#343A40' }}>Reunião</span>
+                <div>
+                  <label htmlFor="endTime" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                    Hora de Fim
+                  </label>
+                  <input
+                    id="endTime"
+                    type="time"
+                    value={blockForm.endTime}
+                    onChange={(e) => setBlockForm({ ...blockForm, endTime: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    required
+                  />
                 </div>
-              </button>
-              
-              <button 
-                onClick={() => setShowBlockModal(false)}
-                className="w-full p-3 rounded-lg text-left transition-colors hover:bg-gray-50"
-                style={{ border: '1px solid #DEE2E6' }}
-              >
-                <div className="flex items-center space-x-3">
-                  <BookOpen size={20} style={{ color: '#6C757D' }} />
-                  <span style={{ color: '#343A40' }}>Estudo/Atualização</span>
+              </div>
+
+              {/* Cor */}
+              <div>
+                <label className="block text-sm font-medium mb-3" style={{ color: '#343A40' }}>
+                  Cor do Bloqueio
+                </label>
+                <div className="flex items-center space-x-2">
+                  {predefinedColors.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setBlockForm({ ...blockForm, color })}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        blockForm.color === color ? 'scale-110 shadow-md' : 'hover:scale-105'
+                      }`}
+                      style={{ 
+                        backgroundColor: color,
+                        borderColor: blockForm.color === color ? '#343A40' : 'transparent'
+                      }}
+                    />
+                  ))}
+                  <div className="flex items-center space-x-2 ml-4">
+                    <Palette size={16} style={{ color: '#6C757D' }} />
+                    <input
+                      type="color"
+                      value={blockForm.color}
+                      onChange={(e) => setBlockForm({ ...blockForm, color: e.target.value })}
+                      className="w-8 h-8 rounded border cursor-pointer"
+                      style={{ border: '1px solid #DEE2E6' }}
+                    />
+                  </div>
                 </div>
-              </button>
-            </div>
+              </div>
+
+              {/* Emoji (Opcional) */}
+              <div>
+                <label htmlFor="emoji" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  Emoji (Opcional)
+                </label>
+                <div className="flex items-center space-x-2">
+                  <Smile size={16} style={{ color: '#6C757D' }} />
+                  <input
+                    id="emoji"
+                    type="text"
+                    value={blockForm.emoji}
+                    onChange={(e) => setBlockForm({ ...blockForm, emoji: e.target.value.slice(0, 2) })}
+                    className="flex-1 px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="🍽️ 📚 ☕ 💼"
+                    maxLength={2}
+                  />
+                </div>
+              </div>
+
+              {/* Ações */}
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowBlockModal(false)}
+                  className="px-4 py-2 rounded-lg transition-colors hover:bg-gray-50"
+                  style={{ 
+                    color: '#343A40',
+                    border: '1px solid #DEE2E6'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg text-white transition-colors"
+                  style={{ backgroundColor: '#347474' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2d6363';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#347474';
+                  }}
+                >
+                  Criar Bloqueio
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* Legenda do ícone de sessão */}
-      <div className="mt-6 flex items-center gap-8 text-xs text-gray-500" style={{ fontSize: 13 }}>
-        <span className="flex items-center gap-1">
-          <Video size={16} style={{ color: '#347474' }} />
-          <MapPin size={16} style={{ color: '#347474' }} />
-          <span className="ml-1">= Pago</span>
-        </span>
-        <span className="flex items-center gap-1">
-          <Video size={16} style={{ color: '#F4A261' }} />
-          <MapPin size={16} style={{ color: '#F4A261' }} />
-          <span className="ml-1">= Pagamento pendente</span>
-        </span>
-      </div>
-
-      {/* Legend */}
-      <div className="mt-3 flex items-center justify-between">
+      {/* Legenda Simplificada */}
+      <div className="mt-6 flex items-center justify-between">
         <div className="flex items-center space-x-6">
-          {/* Sessão Confirmada/Paga */}
+          {/* Sessão Paga */}
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 rounded-sm border-l-4" style={{
-              backgroundColor: '#FFF',
+              backgroundColor: 'rgba(52, 116, 116, 0.13)',
               borderLeftColor: '#347474'
             }}></div>
-            <span className="text-sm" style={{ color: '#6C757D' }}>Sessão Confirmada/Paga</span>
+            <span className="text-sm" style={{ color: '#6C757D' }}>Sessão Paga</span>
           </div>
-          {/* Sessão Pendente */}
+          {/* Pagamento Pendente */}
           <div className="flex items-center space-x-2">
             <div className="w-4 h-4 rounded-sm border-l-4" style={{
-              backgroundColor: '#FFF',
+              backgroundColor: 'rgba(244, 162, 97, 0.13)',
               borderLeftColor: '#F4A261'
             }}></div>
-            <span className="text-sm" style={{ color: '#6C757D' }}>Sessão Pendente</span>
-          </div>
-          {/* Bloqueado */}
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-sm border-l-4" style={{
-              backgroundColor: getBlockBackground('blocked'),
-              borderLeftColor: getBlockColor('blocked')
-            }}></div>
-            <span className="text-sm" style={{ color: '#6C757D' }}>Bloqueado</span>
-          </div>
-          {/* Almoço */}
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-sm border-l-4" style={{
-              backgroundColor: getBlockBackground('lunch'),
-              borderLeftColor: getBlockColor('lunch')
-            }}></div>
-            <span className="text-sm" style={{ color: '#6C757D' }}>Almoço</span>
-          </div>
-          {/* Reunião */}
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-sm border-l-4" style={{
-              backgroundColor: getBlockBackground('meeting'),
-              borderLeftColor: getBlockColor('meeting')
-            }}></div>
-            <span className="text-sm" style={{ color: '#6C757D' }}>Reunião</span>
-          </div>
-          {/* Estudo */}
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-4 rounded-sm border-l-4" style={{
-              backgroundColor: getBlockBackground('study'),
-              borderLeftColor: getBlockColor('study')
-            }}></div>
-            <span className="text-sm" style={{ color: '#6C757D' }}>Estudo</span>
+            <span className="text-sm" style={{ color: '#6C757D' }}>Pagamento Pendente</span>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, User, ChevronRight, TrendingUp, Users, CreditCard, Calendar, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, User, ChevronRight, TrendingUp, Users, CreditCard, Calendar, Plus, FileText, MoreHorizontal, Edit, Archive } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
@@ -9,30 +9,43 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+  const [openClientMenu, setOpenClientMenu] = useState<number | null>(null);
+
+  // Mock de sessões do dia
+  const todaySessions = [
+    { id: 1, time: '09:00', client: 'Juliana Costa', status: 'confirmado' },
+    { id: 2, time: '10:30', client: 'Carlos Mendes', status: 'confirmado' },
+    { id: 3, time: '14:00', client: 'Maria Santos', status: 'pendente' },
+    { id: 4, time: '15:30', client: 'Juliana Costa', status: 'confirmado' }
+  ];
+
   const recentClients = [
     {
       id: 1,
       name: 'Juliana Costa',
       email: 'juliana@email.com',
-      lastSession: '2024-01-15'
+      lastSession: '2024-01-15',
+      lastSessionFocus: 'Ansiedade Generalizada - CBT',
+      status: 'Ativo'
     },
     {
       id: 2,
       name: 'Carlos Mendes',
       email: 'carlos@email.com',
-      lastSession: '2024-01-14'
+      lastSession: '2024-01-14',
+      lastSessionFocus: 'Acompanhamento Pós-Trauma',
+      status: 'Ativo'
     },
     {
       id: 3,
       name: 'Maria Santos',
       email: 'maria@email.com',
-      lastSession: '2024-01-13'
-    },
-    {
-      id: 4,
-      name: 'Pedro Oliveira',
-      email: 'pedro@email.com',
-      lastSession: '2024-01-12'
+      lastSession: '2024-01-13',
+      lastSessionFocus: 'Primeira Consulta - Avaliação',
+      status: 'Ativo'
     }
   ];
 
@@ -100,10 +113,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
           <h1 className="text-3xl font-bold mb-2" style={{ color: 'rgb(var(--sys-text-main))' }}>
             Bem-vindo(a) de volta, Dr(a). Ana!
           </h1>
-          <p style={{ color: 'rgb(var(--sys-text-muted))' }}>Aqui está o resumo do seu dia</p>
+          <p style={{ color: 'rgb(var(--sys-text-muted))' }}>
+  {todaySessions.length > 0
+    ? `Você tem ${todaySessions.length} sessão${todaySessions.length > 1 ? 's' : ''} agendada${todaySessions.length > 1 ? 's' : ''} para hoje.`
+    : 'Nenhum agendamento para hoje. Que tal planejar a semana?'}
+</p>
         </div>
         <div className="relative group">
-          <button className="inline-flex items-center text-white font-medium px-4 py-2 rounded-lg transition-colors" style={{ backgroundColor: 'rgb(var(--sys-accent-blue))' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgb(var(--sys-accent-blue-hover))'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgb(var(--sys-accent-blue))'}>
+          <button
+  className="inline-flex items-center font-medium px-4 py-2 rounded-lg transition-colors bg-[#347474] hover:bg-[#285d5d] text-white"
+>
             <Plus className="w-4 h-4 mr-2" />
             <span>Novo</span>
             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,8 +134,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
           <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
             <div className="py-2">
               <button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors">
-                <div className="w-8 h-8 bg-[#2563EB] bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-4 h-4 text-[#2563EB]" />
+                <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-[#347474]" />
                 </div>
                 <div>
                   <p className="font-medium text-[#1F2937]">Agendar Sessão</p>
@@ -124,8 +143,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
               </button>
 
               <button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors">
-                <div className="w-8 h-8 bg-[#10B981] bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <Users className="w-4 h-4 text-[#10B981]" />
+                <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
+                  <Users className="w-4 h-4 text-[#347474]" />
                 </div>
                 <div>
                   <p className="font-medium text-[#1F2937]">Adicionar Cliente</p>
@@ -249,31 +268,105 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
       {/* Recent Clients */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4" style={{ color: '#343A40' }}>Acessados Recentemente</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {recentClients.map((client) => (
             <div 
               key={client.id} 
               className="bg-white p-6 rounded-xl shadow-sm transition-shadow hover:shadow-md"
               style={{ border: '1px solid #DEE2E6' }}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold mb-1" style={{ color: '#343A40' }}>{client.name}</h3>
-                  <p className="text-sm mb-3" style={{ color: '#6C757D' }}>{client.email}</p>
-                  <p className="text-xs mb-3" style={{ color: '#6C757D' }}>
-                    Última sessão: {new Date(client.lastSession).toLocaleDateString('pt-BR')}
-                  </p>
-                  <button 
-                    onClick={onNavigateToClient}
-                    className="text-sm font-medium flex items-center space-x-1 hover:underline"
-                    style={{ color: '#347474' }}
+              {/* Header do Card */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                    style={{ backgroundColor: '#347474' }}
                   >
-                    <span>Ver Perfil</span>
-                    <ChevronRight size={14} />
-                  </button>
+                    {getInitials(client.name)}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg" style={{ color: '#343A40' }}>{client.name}</h3>
+                    <p className="text-sm" style={{ color: '#6C757D' }}>{client.email}</p>
+                  </div>
                 </div>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F8F9FA' }}>
-                  <User size={16} style={{ color: '#6C757D' }} />
+              </div>
+
+              {/* Informações da Última Sessão */}
+              <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: '#F8F9FA' }}>
+                <p className="text-xs font-medium mb-1" style={{ color: '#6C757D' }}>
+                  Última sessão: {new Date(client.lastSession).toLocaleDateString('pt-BR')}
+                </p>
+                <p className="text-sm font-medium" style={{ color: '#343A40' }}>
+                  Foco: {client.lastSessionFocus}
+                </p>
+              </div>
+
+              {/* Ações */}
+              <div className="flex items-center justify-between">
+                <button 
+                  onClick={onNavigateToClient}
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg text-white transition-colors"
+                  style={{ backgroundColor: '#347474' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#2d6363';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#347474';
+                  }}
+                >
+                  <FileText size={14} />
+                  <span className="text-sm font-medium">Ver Prontuário</span>
+                </button>
+                
+                <div className="relative" data-client-menu={client.id}>
+                  <button
+                    onClick={() => setOpenClientMenu(openClientMenu === client.id ? null : client.id)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    style={{ color: '#6C757D' }}
+                    title="Mais ações"
+                  >
+                    <MoreHorizontal size={16} />
+                  </button>
+
+                  {/* Menu de Ações */}
+                  {openClientMenu === client.id && (
+                    <div className="absolute right-0 bottom-10 bg-white rounded-lg shadow-xl border z-50 min-w-[220px]" style={{ border: '1px solid #DEE2E6' }}>
+                      <button
+                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
+                        style={{ color: '#343A40' }}
+                        onClick={() => {
+                          console.log('Agendar Nova Sessão para', client.name);
+                          setOpenClientMenu(null);
+                        }}
+                      >
+                        <Calendar size={16} className="mr-2" />
+                        Agendar Nova Sessão
+                      </button>
+                      <button
+                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                        style={{ color: '#343A40' }}
+                        onClick={() => {
+                          console.log('Editar Cliente', client.name);
+                          setOpenClientMenu(null);
+                        }}
+                      >
+                        <Edit size={16} className="mr-2" />
+                        Editar Cliente
+                      </button>
+                      <div className="border-t my-1 border-gray-200" />
+                      <button
+                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
+                        style={{ color: '#E76F51' }}
+                        onClick={() => {
+                          console.log('Arquivar Cliente', client.name);
+                          setOpenClientMenu(null);
+                        }}
+                      >
+                        <Archive size={16} className="mr-2" />
+                        Arquivar Cliente
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
