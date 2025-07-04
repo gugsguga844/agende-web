@@ -97,13 +97,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: '#343A40' }}>
+          <h1 className="text-3xl font-bold mb-2" style={{ color: 'rgb(var(--sys-text-main))' }}>
             Bem-vindo(a) de volta, Dr(a). Ana!
           </h1>
-          <p style={{ color: '#6C757D' }}>Aqui está o resumo do seu dia</p>
+          <p style={{ color: 'rgb(var(--sys-text-muted))' }}>Aqui está o resumo do seu dia</p>
         </div>
         <div className="relative group">
-          <button className="inline-flex items-center bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium px-4 py-2 rounded-lg transition-colors">
+          <button className="inline-flex items-center text-white font-medium px-4 py-2 rounded-lg transition-colors" style={{ backgroundColor: 'rgb(var(--sys-accent-blue))' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgb(var(--sys-accent-blue-hover))'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgb(var(--sys-accent-blue))'}>
             <Plus className="w-4 h-4 mr-2" />
             <span>Novo</span>
             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,9 +143,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(52, 116, 116, 0.1)' }}>
-                <TrendingUp size={20} style={{ color: '#347474' }} />
+                <TrendingUp size={20} style={{ color: 'rgb(var(--sys-primary))' }} />
               </div>
-              <h3 className="font-semibold" style={{ color: '#343A40' }}>Sessões na Semana</h3>
+              <h3 className="font-semibold" style={{ color: 'rgb(var(--sys-text-main))' }}>Sessões na Semana</h3>
             </div>
           </div>
           <div className="flex items-end justify-between">

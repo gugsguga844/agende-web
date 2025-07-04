@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, User, Clock, Plus, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal } from 'lucide-react';
 
 interface Session {
   id: number;
