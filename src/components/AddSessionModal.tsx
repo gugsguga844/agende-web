@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Bold, Italic, List, Clock, User, MapPin, Video, DollarSign, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, Calendar, FileText, Bold, Italic, List, Clock, User, MapPin, Video, DollarSign, Search, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
+import AddClientModal from './AddClientModal';
 
 interface Client {
   id: number;
@@ -42,6 +43,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [toast, setToast] = useState<ToastMessage>({ type: 'success', message: '', show: false });
+  const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
 
   // Sample clients data
   const clients: Client[] = [
@@ -315,6 +317,15 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                       className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" 
                       style={{ color: '#6C757D' }} 
                     />
+                    <button
+                      type="button"
+                      onClick={() => setIsAddClientModalOpen(true)}
+                      className="absolute right-8 top-1/2 transform -translate-y-1/2 w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-gray-100"
+                      style={{ color: '#347474' }}
+                      title="Adicionar novo cliente"
+                    >
+                      +
+                    </button>
                   </div>
 
                   {/* Client Dropdown */}
@@ -780,6 +791,12 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
           }
         }
       `}</style>
+
+      {/* Add Client Modal */}
+      <AddClientModal 
+        isOpen={isAddClientModalOpen}
+        onClose={() => setIsAddClientModalOpen(false)}
+      />
     </>
   );
 };

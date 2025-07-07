@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit, Phone, Mail, User, Calendar, FileText, ChevronDown, Archive, DollarSign, Save, X } from 'lucide-react';
+import { Edit, Phone, Mail, User, Plus, Calendar, FileText, ChevronDown, Archive, DollarSign, Save, X } from 'lucide-react';
 import AddSessionModal from './AddSessionModal';
 
 const ClientProfile: React.FC = () => {
@@ -13,7 +13,10 @@ const ClientProfile: React.FC = () => {
     email: 'juliana@email.com',
     phone: '(11) 99999-9999',
     status: 'Ativo',
-    notes: 'Paciente com quadro de ansiedade generalizada. Responde bem à terapia cognitivo-comportamental. Importante manter rotina de exercícios e técnicas de respiração.'
+    notes: 'Paciente com quadro de ansiedade generalizada. Responde bem à terapia cognitivo-comportamental. Importante manter rotina de exercícios e técnicas de respiração.',
+    birthDate: '1990-08-15',
+    cpfNif: '123.456.789-00',
+    emergencyContact: 'Maria Silva (Mãe) - (11) 88888-8888'
   });
 
   const client = {
@@ -21,7 +24,10 @@ const ClientProfile: React.FC = () => {
     email: 'juliana@email.com',
     phone: '(11) 99999-9999',
     status: 'Ativo',
-    notes: 'Paciente com quadro de ansiedade generalizada. Responde bem à terapia cognitivo-comportamental. Importante manter rotina de exercícios e técnicas de respiração.'
+    notes: 'Paciente com quadro de ansiedade generalizada. Responde bem à terapia cognitivo-comportamental. Importante manter rotina de exercícios e técnicas de respiração.',
+    birthDate: '1990-08-15',
+    cpfNif: '123.456.789-00',
+    emergencyContact: 'Maria Silva (Mãe) - (11) 88888-8888'
   };
 
   const sessions = [
@@ -182,7 +188,8 @@ const ClientProfile: React.FC = () => {
               )}
             </div>
 
-            <div className="space-y-6">
+            {/* Grid Layout para Dados Principais */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Nome Completo */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
@@ -208,7 +215,7 @@ const ClientProfile: React.FC = () => {
                     }}
                   />
                 ) : (
-                  <p className="py-2" style={{ color: '#343A40' }}>{client.name}</p>
+                  <p className="py-2 font-medium" style={{ color: '#343A40' }}>{client.name}</p>
                 )}
               </div>
 
@@ -297,19 +304,121 @@ const ClientProfile: React.FC = () => {
                     <option value="Inativo">Inativo</option>
                   </select>
                 ) : (
-                  <span 
-                    className="inline-block px-3 py-1 rounded-full text-sm font-medium text-white"
-                    style={{ backgroundColor: client.status === 'Ativo' ? '#347474' : '#6C757D' }}
-                  >
-                    {client.status}
-                  </span>
+                  <div className="py-2">
+                    <span 
+                      className="inline-block px-3 py-1 rounded-full text-sm font-medium text-white"
+                      style={{ backgroundColor: client.status === 'Ativo' ? '#347474' : '#6C757D' }}
+                    >
+                      {client.status}
+                    </span>
+                  </div>
                 )}
               </div>
 
-              {/* Notas Administrativas */}
+              {/* Data de Nascimento */}
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                  Notas Administrativas
+                  Data de Nascimento
+                </label>
+                {isEditing ? (
+                  <input
+                    type="date"
+                    value={editedClient.birthDate || ''}
+                    onChange={(e) => setEditedClient({ ...editedClient, birthDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                ) : (
+                  <p className="py-2" style={{ color: '#343A40' }}>
+                    {client.birthDate ? new Date(client.birthDate).toLocaleDateString('pt-BR') : '-'}
+                  </p>
+                )}
+              </div>
+
+              {/* CPF/NIF */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  CPF/NIF <span className="text-xs" style={{ color: '#6C757D' }}>(para recibos)</span>
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedClient.cpfNif || ''}
+                    onChange={(e) => setEditedClient({ ...editedClient, cpfNif: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="000.000.000-00"
+                  />
+                ) : (
+                  <p className="py-2" style={{ color: '#343A40' }}>
+                    {client.cpfNif || '-'}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Seções de Largura Total */}
+            <div className="space-y-6">
+              {/* Contato de Emergência */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  Contato de Emergência
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editedClient.emergencyContact || ''}
+                    onChange={(e) => setEditedClient({ ...editedClient, emergencyContact: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="Nome e telefone do contato..."
+                  />
+                ) : (
+                  <div className="rounded-lg p-3" style={{ backgroundColor: '#F8F9FA' }}>
+                    <p className="leading-relaxed" style={{ color: '#6C757D' }}>
+                      {client.emergencyContact || 'Nenhum contato de emergência cadastrado'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Resumo do Caso */}
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  Resumo do Caso
                 </label>
                 {isEditing ? (
                   <textarea
@@ -329,9 +438,10 @@ const ClientProfile: React.FC = () => {
                       e.target.style.borderColor = '#DEE2E6';
                       e.target.style.boxShadow = 'none';
                     }}
+                    placeholder="Descreva o quadro clínico, histórico relevante, objetivos terapêuticos..."
                   />
                 ) : (
-                  <div className="rounded-lg p-3" style={{ backgroundColor: '#F8F9FA' }}>
+                  <div className="rounded-lg p-4" style={{ backgroundColor: '#F8F9FA' }}>
                     <p className="leading-relaxed" style={{ color: '#6C757D' }}>
                       {client.notes}
                     </p>

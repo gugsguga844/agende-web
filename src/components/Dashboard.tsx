@@ -3,6 +3,7 @@ import { Clock, User, ChevronRight, TrendingUp, Users, CreditCard, Calendar, Plu
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
+import AddSessionModal from './AddSessionModal';
 
 interface DashboardProps {
   onNavigateToClient: () => void;
@@ -13,6 +14,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
   const [openClientMenu, setOpenClientMenu] = useState<number | null>(null);
+  const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
+  const [modalClientName, setModalClientName] = useState<string | undefined>(undefined);
+  const [modalMode, setModalMode] = useState<'register' | 'schedule'>('register');
 
   const recentClients = [
     {
@@ -97,7 +101,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
   const activeClientsPercentage = Math.max(0, Math.min(100, 85));
   const donutProps = generateDonutPath(activeClientsPercentage);
 
+  // Função para abrir o modal com contexto
+  const openAddSessionModal = (clientName?: string, mode: 'register' | 'schedule' = 'register') => {
+    setModalClientName(clientName);
+    setModalMode(mode);
+    setIsAddSessionModalOpen(true);
+  };
+
   return (
+  <div>
     <div className="p-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
@@ -111,8 +123,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
         </div>
         <div className="relative group">
           <button
-  className="inline-flex items-center font-medium px-4 py-2 rounded-lg transition-colors bg-[#347474] hover:bg-[#285d5d] text-white"
->
+            className="inline-flex items-center font-medium px-4 py-2 rounded-lg transition-colors bg-[#347474] hover:bg-[#285d5d] text-white"
+            onClick={() => openAddSessionModal(undefined, 'schedule')}
+          >
             <Plus className="w-4 h-4 mr-2" />
             <span>Novo</span>
             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -123,7 +136,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
           {/* Dropdown Menu */}
           <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
             <div className="py-2">
-              <button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors">
+              <button
+                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors"
+                onClick={() => openAddSessionModal(undefined, 'schedule')}
+              >
                 <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
                   <Calendar className="w-4 h-4 text-[#347474]" />
                 </div>
@@ -131,7 +147,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                   <p className="font-medium text-[#1F2937]">Agendar Sessão</p>
                 </div>
               </button>
-
               <button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors">
                 <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
                   <Users className="w-4 h-4 text-[#347474]" />
@@ -325,7 +340,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                         className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
                         style={{ color: '#343A40' }}
                         onClick={() => {
-                          console.log('Agendar Nova Sessão para', client.name);
+                          openAddSessionModal(client.name, 'schedule');
                           setOpenClientMenu(null);
                         }}
                       >
@@ -440,8 +455,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
 
                     {/* Ações */}
                     <div className="flex items-center space-x-2 ml-6">
-                      <Button size="sm" className="bg-[#347474] hover:bg-[#285d5d] text-white">
-                        {/* Lógica para determinar se é "Iniciar" ou "Registrar" baseado no horário */}
+                      <Button
+                        size="sm"
+                        className="bg-[#347474] hover:bg-[#285d5d] text-white"
+                        onClick={() => openAddSessionModal(session.client, 'register')}
+                      >
                         {new Date().getHours() >= Number.parseInt(session.time.split(":")[0])
                           ? "Registrar Sessão"
                           : "Iniciar Sessão"}
@@ -493,7 +511,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
           </div>
         </div>
     </div>
-  );
+
+    <AddSessionModal
+      isOpen={isAddSessionModalOpen}
+      onClose={() => setIsAddSessionModalOpen(false)}
+      clientName={modalClientName}
+      mode={modalMode}
+    />
+  </div>
+);
 };
 
 export default Dashboard;

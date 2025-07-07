@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, User, Plus, MoreHorizontal } from 'lucide-react';
+import AddClientModal from './AddClientModal';
 
 interface ClientsListProps {
   onNavigateToClient: () => void;
@@ -8,6 +9,7 @@ interface ClientsListProps {
 const ClientsList: React.FC<ClientsListProps> = ({ onNavigateToClient }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
 
   const clients = [
     {
@@ -76,6 +78,7 @@ const ClientsList: React.FC<ClientsListProps> = ({ onNavigateToClient }) => {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold" style={{ color: '#343A40' }}>Meus Clientes</h1>
         <button 
+          onClick={() => setIsAddClientModalOpen(true)}
           className="px-4 py-2 rounded-lg flex items-center space-x-2 text-white transition-colors"
           style={{ backgroundColor: '#347474' }}
           onMouseEnter={(e) => {
@@ -219,6 +222,12 @@ const ClientsList: React.FC<ClientsListProps> = ({ onNavigateToClient }) => {
           </div>
         )}
       </div>
+
+      {/* Add Client Modal */}
+      <AddClientModal 
+        isOpen={isAddClientModalOpen}
+        onClose={() => setIsAddClientModalOpen(false)}
+      />
     </div>
   );
 };

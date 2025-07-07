@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Clock, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal, Plus, ChevronDown, Palette, Smile } from 'lucide-react';
+import AddSessionModal from './AddSessionModal';
 
 interface Session {
   id: number;
@@ -624,6 +625,17 @@ const Calendar: React.FC = () => {
     setShowEmojiPicker(false);
   };
 
+  const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
+  const [modalClientName, setModalClientName] = useState<string | undefined>(undefined);
+  const [modalMode, setModalMode] = useState<'register' | 'schedule'>('schedule');
+
+  // Função para abrir o modal
+  const openAddSessionModal = (clientName?: string, mode: 'register' | 'schedule' = 'schedule') => {
+    setModalClientName(clientName);
+    setModalMode(mode);
+    setIsAddSessionModalOpen(true);
+  };
+
   return (
     <div className="p-8">
       {/* Header */}
@@ -688,7 +700,7 @@ const Calendar: React.FC = () => {
         <div className="relative" ref={createMenuRef}>
           <div className="flex">
             <button 
-              onClick={() => console.log('Agendar Sessão')}
+              onClick={() => openAddSessionModal(undefined, 'schedule')}
               className="px-4 py-2 rounded-l-lg text-white transition-colors"
               style={{ backgroundColor: '#347474' }}
               onMouseEnter={(e) => {
@@ -722,7 +734,7 @@ const Calendar: React.FC = () => {
               <div className="py-2">
                 <button
                   onClick={() => {
-                    console.log('Agendar Sessão');
+                    openAddSessionModal(undefined, 'schedule');
                     setShowCreateMenu(false);
                   }}
                   className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
@@ -1477,6 +1489,14 @@ const Calendar: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Adicionar Sessão */}
+      <AddSessionModal
+        isOpen={isAddSessionModalOpen}
+        onClose={() => setIsAddSessionModalOpen(false)}
+        clientName={modalClientName}
+        mode={modalMode}
+      />
 
       {/* Legenda Simplificada */}
       <div className="mt-6 flex items-center justify-between">
