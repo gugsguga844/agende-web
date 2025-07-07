@@ -536,6 +536,7 @@ const ClientProfile: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         clientName={client.name}
+        mode="register"
       />
     </div>
   );

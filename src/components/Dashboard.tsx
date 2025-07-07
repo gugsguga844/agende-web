@@ -14,14 +14,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
   };
   const [openClientMenu, setOpenClientMenu] = useState<number | null>(null);
 
-  // Mock de sessões do dia
-  const todaySessions = [
-    { id: 1, time: '09:00', client: 'Juliana Costa', status: 'confirmado' },
-    { id: 2, time: '10:30', client: 'Carlos Mendes', status: 'confirmado' },
-    { id: 3, time: '14:00', client: 'Maria Santos', status: 'pendente' },
-    { id: 4, time: '15:30', client: 'Juliana Costa', status: 'confirmado' }
-  ];
-
   const recentClients = [
     {
       id: 1,
@@ -114,10 +106,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
             Bem-vindo(a) de volta, Dr(a). Ana!
           </h1>
           <p style={{ color: 'rgb(var(--sys-text-muted))' }}>
-  {todaySessions.length > 0
-    ? `Você tem ${todaySessions.length} sessão${todaySessions.length > 1 ? 's' : ''} agendada${todaySessions.length > 1 ? 's' : ''} para hoje.`
-    : 'Nenhum agendamento para hoje. Que tal planejar a semana?'}
-</p>
+            Este é seu resumo do dia :)
+          </p>
         </div>
         <div className="relative group">
           <button

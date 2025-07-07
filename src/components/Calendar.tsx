@@ -29,7 +29,8 @@ interface TimeBlock {
 
 interface DragState {
   isDragging: boolean;
-  sessionId: number | null;
+  itemId: number | null;
+  itemType: 'session' | 'block' | null;
   startPosition: { x: number; y: number };
   currentPosition: { x: number; y: number };
   originalDay: string;
@@ -43,9 +44,11 @@ const Calendar: React.FC = () => {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [viewMode, setViewMode] = useState('weekly');
   const [actionMenuSessionId, setActionMenuSessionId] = useState<number | null>(null);
+  const [actionMenuBlockId, setActionMenuBlockId] = useState<number | null>(null);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ day: string; time: string } | null>(null);
   const [blockForm, setBlockForm] = useState({
     title: '',
@@ -57,11 +60,15 @@ const Calendar: React.FC = () => {
 
   const menuButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const menuDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const blockMenuButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const blockMenuDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const createMenuRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   
   const [dragState, setDragState] = useState<DragState>({
     isDragging: false,
-    sessionId: null,
+    itemId: null,
+    itemType: null,
     startPosition: { x: 0, y: 0 },
     currentPosition: { x: 0, y: 0 },
     originalDay: '',
@@ -71,6 +78,18 @@ const Calendar: React.FC = () => {
   });
 
   const calendarRef = useRef<HTMLDivElement>(null);
+
+  // Emojis populares organizados por categoria
+  const emojiCategories = {
+    'Comida': ['🍽️', '☕', '🥗', '🍕', '🍔', '🥪', '🍜', '🍰'],
+    'Trabalho': ['💼', '📊', '📈', '💻', '📝', '📞', '✉️', '📋'],
+    'Estudo': ['📚', '📖', '✏️', '🎓', '🔬', '📐', '🧮', '💡'],
+    'Saúde': ['🏥', '💊', '🩺', '🧘', '🏃', '💪', '🧠', '❤️'],
+    'Pessoas': ['👥', '👨‍⚕️', '👩‍⚕️', '🤝', '👨‍💼', '👩‍💼', '👨‍🎓', '👩‍🎓'],
+    'Atividades': ['🎯', '🎨', '🎵', '🎪', '🎭', '🎬', '🎮', '🏆'],
+    'Transporte': ['🚗', '🚌', '🚇', '✈️', '🚲', '🚶', '🏠', '🏢'],
+    'Símbolos': ['⭐', '🔥', '💎', '🎉', '🎊', '🌟', '✨', '🎈']
+  };
 
   // Sample data with precise timing
   const [sessions, setSessions] = useState<Session[]>([
@@ -299,7 +318,8 @@ const Calendar: React.FC = () => {
   const resetDragState = () => {
     setDragState({
       isDragging: false,
-      sessionId: null,
+      itemId: null,
+      itemType: null,
       startPosition: { x: 0, y: 0 },
       currentPosition: { x: 0, y: 0 },
       originalDay: '',
@@ -309,8 +329,8 @@ const Calendar: React.FC = () => {
     });
   };
 
-  // Drag and drop functions
-  const handleMouseDown = (e: React.MouseEvent, session: Session) => {
+  // Drag and drop functions - Updated to handle both sessions and blocks
+  const handleMouseDown = (e: React.MouseEvent, item: Session | TimeBlock, type: 'session' | 'block') => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -318,15 +338,19 @@ const Calendar: React.FC = () => {
     const cardRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const cardOffsetY = e.clientY - cardRect.top;
 
+    const startTime = type === 'session' ? (item as Session).startTime : (item as TimeBlock).time;
+    const day = item.day;
+
     setDragState({
       isDragging: true,
-      sessionId: session.id,
+      itemId: item.id,
+      itemType: type,
       startPosition: { x: e.clientX, y: e.clientY },
       currentPosition: { x: e.clientX, y: e.clientY },
-      originalDay: session.day,
-      originalTime: session.startTime,
-      newDay: session.day,
-      newTime: session.startTime,
+      originalDay: day,
+      originalTime: startTime,
+      newDay: day,
+      newTime: startTime,
       cardOffsetY
     });
   };
@@ -409,18 +433,24 @@ const Calendar: React.FC = () => {
         if (actionMenuSessionId) {
           setActionMenuSessionId(null);
         }
+        if (actionMenuBlockId) {
+          setActionMenuBlockId(null);
+        }
         if (showCreateMenu) {
           setShowCreateMenu(false);
         }
         if (showBlockModal) {
           setShowBlockModal(false);
         }
+        if (showEmojiPicker) {
+          setShowEmojiPicker(false);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [dragState.isDragging, showConfirmModal, actionMenuSessionId, showCreateMenu, showBlockModal, handleMouseMove, handleMouseUp]);
+  }, [dragState.isDragging, showConfirmModal, actionMenuSessionId, actionMenuBlockId, showCreateMenu, showBlockModal, showEmojiPicker, handleMouseMove, handleMouseUp]);
 
   // Close menus when clicking outside
   React.useEffect(() => {
@@ -435,30 +465,60 @@ const Calendar: React.FC = () => {
         }
       }
 
+      if (actionMenuBlockId) {
+        const menu = blockMenuDropdownRefs.current[actionMenuBlockId];
+        const button = blockMenuButtonRefs.current[actionMenuBlockId];
+        
+        if (menu && !menu.contains(e.target as Node) && 
+            button && !button.contains(e.target as Node)) {
+          setActionMenuBlockId(null);
+        }
+      }
+
       if (showCreateMenu && createMenuRef.current && !createMenuRef.current.contains(e.target as Node)) {
         setShowCreateMenu(false);
+      }
+
+      if (showEmojiPicker && emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [actionMenuSessionId, showCreateMenu]);
+  }, [actionMenuSessionId, actionMenuBlockId, showCreateMenu, showEmojiPicker]);
 
   const confirmReschedule = () => {
-    if (dragState.sessionId) {
-      setSessions(prev => prev.map(session => {
-        if (session.id === dragState.sessionId) {
-          const startMinutes = timeToMinutes(dragState.newTime);
-          const endMinutes = startMinutes + session.duration;
-          return {
-            ...session,
-            day: dragState.newDay,
-            startTime: dragState.newTime,
-            endTime: minutesToTime(endMinutes)
-          };
-        }
-        return session;
-      }));
+    if (dragState.itemId && dragState.itemType) {
+      if (dragState.itemType === 'session') {
+        setSessions(prev => prev.map(session => {
+          if (session.id === dragState.itemId) {
+            const startMinutes = timeToMinutes(dragState.newTime);
+            const endMinutes = startMinutes + session.duration;
+            return {
+              ...session,
+              day: dragState.newDay,
+              startTime: dragState.newTime,
+              endTime: minutesToTime(endMinutes)
+            };
+          }
+          return session;
+        }));
+      } else if (dragState.itemType === 'block') {
+        setTimeBlocks(prev => prev.map(block => {
+          if (block.id === dragState.itemId) {
+            const originalDuration = timeToMinutes(block.endTime) - timeToMinutes(block.time);
+            const newEndTime = minutesToTime(timeToMinutes(dragState.newTime) + originalDuration);
+            return {
+              ...block,
+              day: dragState.newDay,
+              time: dragState.newTime,
+              endTime: newEndTime
+            };
+          }
+          return block;
+        }));
+      }
     }
     
     setShowConfirmModal(false);
@@ -527,17 +587,41 @@ const Calendar: React.FC = () => {
     });
   };
 
-  const getDraggedSession = () => {
-    return sessions.find(s => s.id === dragState.sessionId);
+  const handleDeleteBlock = (blockId: number) => {
+    setTimeBlocks(prev => prev.filter(block => block.id !== blockId));
+    setActionMenuBlockId(null);
   };
 
-  const getDraggedSessionNewEndTime = () => {
-    const session = getDraggedSession();
-    if (!session) return '';
+  const getDraggedItem = () => {
+    if (dragState.itemType === 'session') {
+      return sessions.find(s => s.id === dragState.itemId);
+    } else if (dragState.itemType === 'block') {
+      return timeBlocks.find(b => b.id === dragState.itemId);
+    }
+    return null;
+  };
+
+  const getDraggedItemNewEndTime = () => {
+    const item = getDraggedItem();
+    if (!item) return '';
     
-    const startMinutes = timeToMinutes(dragState.newTime);
-    const endMinutes = startMinutes + session.duration;
-    return minutesToTime(endMinutes);
+    if (dragState.itemType === 'session') {
+      const session = item as Session;
+      const startMinutes = timeToMinutes(dragState.newTime);
+      const endMinutes = startMinutes + session.duration;
+      return minutesToTime(endMinutes);
+    } else if (dragState.itemType === 'block') {
+      const block = item as TimeBlock;
+      const originalDuration = timeToMinutes(block.endTime) - timeToMinutes(block.time);
+      const newEndTime = minutesToTime(timeToMinutes(dragState.newTime) + originalDuration);
+      return newEndTime;
+    }
+    return '';
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setBlockForm(prev => ({ ...prev, emoji }));
+    setShowEmojiPicker(false);
   };
 
   return (
@@ -766,7 +850,7 @@ const Calendar: React.FC = () => {
                   {/* Sessions */}
                   {getSessionsForDay(day.key).map((session) => {
                     const position = getSessionPosition(session);
-                    const isDragging = dragState.isDragging && dragState.sessionId === session.id;
+                    const isDragging = dragState.isDragging && dragState.itemId === session.id && dragState.itemType === 'session';
                     const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
                     const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
                     const isMenuOpen = actionMenuSessionId === session.id;
@@ -780,7 +864,7 @@ const Calendar: React.FC = () => {
                       ) {
                         return;
                       }
-                      handleMouseDown(e, session);
+                      handleMouseDown(e, session, 'session');
                     };
 
                     return (
@@ -893,30 +977,92 @@ const Calendar: React.FC = () => {
                     );
                   })}
 
-                  {/* Time blocks */}
+                  {/* Time blocks - Now draggable */}
                   {getBlocksForDay(day.key).map((block) => {
                     const position = getBlockPosition(block);
+                    const isDragging = dragState.isDragging && dragState.itemId === block.id && dragState.itemType === 'block';
+                    const isMenuOpen = actionMenuBlockId === block.id;
+
+                    const handleBlockMouseDown = (e: React.MouseEvent) => {
+                      const btn = blockMenuButtonRefs.current[block.id];
+                      const menu = blockMenuDropdownRefs.current[block.id];
+                      if (
+                        btn?.contains(e.target as Node) ||
+                        menu?.contains(e.target as Node)
+                      ) {
+                        return;
+                      }
+                      handleMouseDown(e, block, 'block');
+                    };
                     
                     return (
                       <div
                         key={block.id}
-                        className="absolute w-full px-1"
+                        className={`absolute w-full px-1 ${isDragging ? 'opacity-50' : ''}`}
                         style={{
                           top: position.top,
                           height: position.height,
-                          zIndex: 10
+                          zIndex: isDragging ? 50 : isMenuOpen ? 30 : 10
                         }}
                       >
                         <div
-                          className="h-full p-2 rounded-lg border-l-4"
+                          className="h-full p-2 rounded-lg border-l-4 cursor-move transition-all duration-200 shadow-sm group hover:shadow-md hover:-translate-y-0.5"
                           style={{
                             backgroundColor: `${block.color}20`,
-                            borderLeftColor: block.color
+                            borderLeftColor: block.color,
+                            cursor: isDragging ? 'grabbing' : 'grab'
                           }}
+                          onMouseDown={handleBlockMouseDown}
                         >
-                          <div className="flex items-center space-x-1 mb-1">
-                            {block.emoji && <span className="text-xs">{block.emoji}</span>}
-                            <span className="text-xs" style={{ color: '#6C757D' }}>{block.duration}</span>
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center space-x-1">
+                              {block.emoji && <span className="text-xs">{block.emoji}</span>}
+                              <span className="text-xs" style={{ color: '#6C757D' }}>{block.duration}</span>
+                            </div>
+                            <div className="relative">
+                              <button
+                                ref={el => (blockMenuButtonRefs.current[block.id] = el)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-full hover:bg-white/50"
+                                style={{ color: '#6C757D' }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setActionMenuBlockId(block.id === actionMenuBlockId ? null : block.id);
+                                }}
+                              >
+                                <MoreHorizontal size={12} />
+                              </button>
+                              
+                              {/* Menu de ações para bloqueios */}
+                              {isMenuOpen && (
+                                <div
+                                  ref={el => (blockMenuDropdownRefs.current[block.id] = el)}
+                                  className="absolute right-0 bottom-6 bg-white rounded-lg shadow-xl border z-50 min-w-[160px]"
+                                  style={{ border: '1px solid #DEE2E6' }}
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <button
+                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
+                                    style={{ color: '#343A40' }}
+                                    onClick={() => {
+                                      console.log('Editar Bloqueio');
+                                      setActionMenuBlockId(null);
+                                    }}
+                                  >
+                                    <Clock size={14} className="mr-2" /> Editar
+                                  </button>
+                                  <div className="border-t my-1 border-gray-200" />
+                                  <button
+                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
+                                    style={{ color: '#E76F51' }}
+                                    onClick={() => {
+                                      handleDeleteBlock(block.id);
+                                    }}
+                                  >
+                                    <Trash2 size={14} className="mr-2" /> Excluir
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           <div className="font-medium text-sm" style={{ color: '#343A40' }}>{block.title}</div>
                         </div>
@@ -940,41 +1086,98 @@ const Calendar: React.FC = () => {
           }}
         >
           <div className="bg-white rounded-lg shadow-xl p-3 border-l-4 border-2 border-dashed min-w-[160px]" style={{
-            backgroundColor: getDraggedSession()?.paymentStatus === 'pago'
-              ? 'rgba(52, 116, 116, 0.13)'
-              : 'rgba(244, 162, 97, 0.13)',
-            borderColor: getDraggedSession()?.paymentStatus === 'pago' ? '#347474' : '#F4A261',
-            borderLeftColor: getDraggedSession()?.paymentStatus === 'pago' ? '#347474' : '#F4A261'
+            backgroundColor: (() => {
+              const item = getDraggedItem();
+              if (dragState.itemType === 'session') {
+                const session = item as Session;
+                return session?.paymentStatus === 'pago'
+                  ? 'rgba(52, 116, 116, 0.13)'
+                  : 'rgba(244, 162, 97, 0.13)';
+              } else if (dragState.itemType === 'block') {
+                const block = item as TimeBlock;
+                return `${block?.color}20`;
+              }
+              return 'rgba(52, 116, 116, 0.13)';
+            })(),
+            borderColor: (() => {
+              const item = getDraggedItem();
+              if (dragState.itemType === 'session') {
+                const session = item as Session;
+                return session?.paymentStatus === 'pago' ? '#347474' : '#F4A261';
+              } else if (dragState.itemType === 'block') {
+                const block = item as TimeBlock;
+                return block?.color || '#8390FA';
+              }
+              return '#347474';
+            })(),
+            borderLeftColor: (() => {
+              const item = getDraggedItem();
+              if (dragState.itemType === 'session') {
+                const session = item as Session;
+                return session?.paymentStatus === 'pago' ? '#347474' : '#F4A261';
+              } else if (dragState.itemType === 'block') {
+                const block = item as TimeBlock;
+                return block?.color || '#8390FA';
+              }
+              return '#347474';
+            })()
           }}>
             {(() => {
-              const session = getDraggedSession();
-              if (!session) return null;
+              const item = getDraggedItem();
+              if (!item) return null;
               
-              const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
-              const newEndTime = getDraggedSessionNewEndTime();
-              const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
+              if (dragState.itemType === 'session') {
+                const session = item as Session;
+                const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
+                const newEndTime = getDraggedItemNewEndTime();
+                const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
+                
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-1">
+                      <SessionIcon size={12} style={{ color: iconColor }} />
+                      <span className="text-xs font-medium text-center flex-1 mx-1" style={{ color: '#343A40' }}>
+                        {dragState.newTime} - {newEndTime}
+                      </span>
+                      <span className="text-xs" style={{ color: '#6C757D' }}>
+                        ({session.duration}min)
+                      </span>
+                    </div>
+                    
+                    <div className="font-medium text-sm mb-1" style={{ color: '#343A40' }}>
+                      {session.client}
+                    </div>
+                    
+                    <div className="text-xs" style={{ color: '#6C757D' }}>
+                      {weekDays.find(d => d.key === dragState.newDay)?.label}
+                    </div>
+                  </>
+                );
+              } else if (dragState.itemType === 'block') {
+                const block = item as TimeBlock;
+                const newEndTime = getDraggedItemNewEndTime();
+                
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-1">
+                      {block.emoji && <span className="text-xs">{block.emoji}</span>}
+                      <span className="text-xs font-medium text-center flex-1 mx-1" style={{ color: '#343A40' }}>
+                        {dragState.newTime} - {newEndTime}
+                      </span>
+                    </div>
+                    
+                    <div className="font-medium text-sm mb-1" style={{ color: '#343A40' }}>
+                      {block.title}
+                    </div>
+                    
+                    <div className="text-xs" style={{ color: '#6C757D' }}>
+                      {weekDays.find(d => d.key === dragState.newDay)?.label}
+                    </div>
+                  </>
+                );
+              }
               
-              return (
-                <>
-                  <div className="flex items-center justify-between mb-1">
-                    <SessionIcon size={12} style={{ color: iconColor }} />
-                    <span className="text-xs font-medium text-center flex-1 mx-1" style={{ color: '#343A40' }}>
-                      {dragState.newTime} - {newEndTime}
-                    </span>
-                    <span className="text-xs" style={{ color: '#6C757D' }}>
-                      ({session.duration}min)
-                    </span>
-                  </div>
-                  
-                  <div className="font-medium text-sm mb-1" style={{ color: '#343A40' }}>
-                    {session.client}
-                  </div>
-                  
-                  <div className="text-xs" style={{ color: '#6C757D' }}>
-                    {weekDays.find(d => d.key === dragState.newDay)?.label}
-                  </div>
-                </>
-              );
+              return null;
             })()}
           </div>
         </div>
@@ -988,9 +1191,29 @@ const Calendar: React.FC = () => {
               Confirmar Reagendamento
             </h3>
             <p className="text-sm mb-6" style={{ color: '#6C757D' }}>
-              Deseja reagendar a sessão com <strong>{getDraggedSession()?.client}</strong> para{' '}
-              <strong>{weekDays.find(d => d.key === dragState.newDay)?.label}</strong> às{' '}
-              <strong>{dragState.newTime}</strong>?
+              {(() => {
+                const item = getDraggedItem();
+                if (dragState.itemType === 'session') {
+                  const session = item as Session;
+                  return (
+                    <>
+                      Deseja reagendar a sessão com <strong>{session?.client}</strong> para{' '}
+                      <strong>{weekDays.find(d => d.key === dragState.newDay)?.label}</strong> às{' '}
+                      <strong>{dragState.newTime}</strong>?
+                    </>
+                  );
+                } else if (dragState.itemType === 'block') {
+                  const block = item as TimeBlock;
+                  return (
+                    <>
+                      Deseja mover o bloqueio <strong>{block?.title}</strong> para{' '}
+                      <strong>{weekDays.find(d => d.key === dragState.newDay)?.label}</strong> às{' '}
+                      <strong>{dragState.newTime}</strong>?
+                    </>
+                  );
+                }
+                return 'Deseja confirmar esta alteração?';
+              })()}
             </p>
             <div className="flex justify-end space-x-3">
               <button
@@ -1160,29 +1383,67 @@ const Calendar: React.FC = () => {
                   Emoji (Opcional)
                 </label>
                 <div className="flex items-center space-x-2">
-                  <Smile size={16} style={{ color: '#6C757D' }} />
-                  <input
-                    id="emoji"
-                    type="text"
-                    value={blockForm.emoji}
-                    onChange={(e) => setBlockForm({ ...blockForm, emoji: e.target.value.slice(0, 2) })}
-                    className="flex-1 px-3 py-2 rounded-lg transition-colors"
-                    style={{ 
-                      border: '1px solid #DEE2E6',
-                      color: '#343A40'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#347474';
-                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#DEE2E6';
-                      e.target.style.boxShadow = 'none';
-                    }}
-                    placeholder="🍽️ 📚 ☕ 💼"
-                    maxLength={2}
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      id="emoji"
+                      type="text"
+                      value={blockForm.emoji}
+                      onChange={(e) => setBlockForm({ ...blockForm, emoji: e.target.value.slice(0, 2) })}
+                      className="w-full px-3 py-2 pr-10 rounded-lg transition-colors"
+                      style={{ 
+                        border: '1px solid #DEE2E6',
+                        color: '#343A40'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#347474';
+                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#DEE2E6';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                      placeholder="🍽️ 📚 ☕ 💼"
+                      maxLength={2}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-gray-100 rounded transition-colors"
+                      style={{ color: '#6C757D' }}
+                    >
+                      <Smile size={16} />
+                    </button>
+                  </div>
                 </div>
+
+                {/* Emoji Picker */}
+                {showEmojiPicker && (
+                  <div 
+                    ref={emojiPickerRef}
+                    className="mt-3 p-4 bg-white rounded-lg shadow-lg border max-h-64 overflow-y-auto"
+                    style={{ border: '1px solid #DEE2E6' }}
+                  >
+                    {Object.entries(emojiCategories).map(([category, emojis]) => (
+                      <div key={category} className="mb-4">
+                        <h4 className="text-xs font-medium mb-2" style={{ color: '#6C757D' }}>
+                          {category}
+                        </h4>
+                        <div className="grid grid-cols-8 gap-1">
+                          {emojis.map((emoji) => (
+                            <button
+                              key={emoji}
+                              type="button"
+                              onClick={() => handleEmojiSelect(emoji)}
+                              className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded transition-colors text-lg"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Ações */}
