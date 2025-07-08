@@ -1,5 +1,6 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Clock, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal, Plus, ChevronDown, Palette, Smile, Settings } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, Clock, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal, Plus, ChevronDown, Palette, Smile } from 'lucide-react';
+import AddSessionModal from './AddSessionModal';
 
 interface Session {
   id: number;
@@ -43,12 +44,6 @@ interface DragState {
 const Calendar: React.FC = () => {
   const [currentWeek, setCurrentWeek] = useState(0);
   const [viewMode, setViewMode] = useState('weekly');
-  const [weekDays, setWeekDays] = useState<5 | 7>(5); // 5 or 7 days view
-  const [showViewOptions, setShowViewOptions] = useState(false);
-  const [viewOptions, setViewOptions] = useState({
-    showTimeBlocks: true,
-    showCancelledSessions: false
-  });
   const [actionMenuSessionId, setActionMenuSessionId] = useState<number | null>(null);
   const [actionMenuBlockId, setActionMenuBlockId] = useState<number | null>(null);
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -229,30 +224,13 @@ const Calendar: React.FC = () => {
     }
   ]);
 
-  // weekDaysData: Segunda a Domingo
-  const weekDaysData = [
+  const weekDays = [
     { key: 'monday', label: 'Segunda', date: '15/01' },
     { key: 'tuesday', label: 'Terça', date: '16/01' },
     { key: 'wednesday', label: 'Quarta', date: '17/01' },
     { key: 'thursday', label: 'Quinta', date: '18/01' },
-    { key: 'friday', label: 'Sexta', date: '19/01' },
-    { key: 'saturday', label: 'Sábado', date: '20/01' },
-    { key: 'sunday', label: 'Domingo', date: '21/01' }
+    { key: 'friday', label: 'Sexta', date: '19/01' }
   ];
-
-  // Função utilitária para obter a ordem correta dos dias
-  function getDisplayedDays(weekDays: number) {
-    if (weekDays === 5) {
-      // Segunda a Sexta
-      return weekDaysData.slice(0, 5);
-    } else {
-      // Domingo a Sábado
-      return [
-        weekDaysData[6], // Domingo
-        ...weekDaysData.slice(0, 6) // Segunda a Sábado
-      ];
-    }
-  }
 
   const workingHours = { start: 7, end: 19 };
   const timeSlots = Array.from({ length: 12 }, (_, i) => {
@@ -356,10 +334,10 @@ const Calendar: React.FC = () => {
   const handleMouseDown = (e: React.MouseEvent, item: Session | TimeBlock, type: 'session' | 'block') => {
     e.preventDefault();
     e.stopPropagation();
-    // O evento deve ser disparado no container do card
+    // Calculate offset between mouse and top of card
     const cardRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const cardOffsetY = e.clientY - cardRect.top;
-    console.log('cardOffsetY', cardOffsetY); // Para depuração, compare com o backup
+    console.log('cardOffsetY', cardOffsetY); // Para depuração, compare com o Calendar atual
     const startTime = type === 'session' ? (item as Session).startTime : (item as TimeBlock).time;
     const day = item.day;
     setDragState({
@@ -382,18 +360,23 @@ const Calendar: React.FC = () => {
       const relativeX = e.clientX - rect.left;
       const offsetY = dragState.cardOffsetY ?? 0;
       const relativeY = e.clientY - offsetY - rect.top;
+      
       const timeColumnWidth = 120;
-      const dayWidth = (rect.width - timeColumnWidth) / weekDays;
+      const dayWidth = (rect.width - timeColumnWidth) / 5;
       const dayIndex = Math.floor((relativeX - timeColumnWidth) / dayWidth);
-      const newDay = getDisplayedDays(weekDays)[dayIndex]?.key || dragState.originalDay;
+      const newDay = weekDays[dayIndex]?.key || dragState.originalDay;
+      
       const headerHeight = 80;
       const calendarHeight = 960;
       const relativeCalendarY = Math.max(0, relativeY - headerHeight);
+      
       const totalDayMinutes = (workingHours.end - workingHours.start) * 60;
       const minutesFromStart = (relativeCalendarY / calendarHeight) * totalDayMinutes;
       const absoluteMinutes = workingHours.start * 60 + minutesFromStart;
+      
       const snappedMinutes = snapToGrid(Math.max(workingHours.start * 60, Math.min(workingHours.end * 60 - 30, absoluteMinutes)));
       const newTime = minutesToTime(snappedMinutes);
+      
       setDragState(prev => ({
         ...prev,
         currentPosition: { x: e.clientX, y: e.clientY },
@@ -401,7 +384,7 @@ const Calendar: React.FC = () => {
         newTime
       }));
     }
-  }, [dragState.isDragging, dragState.originalDay, dragState.cardOffsetY, workingHours.start, workingHours.end, weekDays]);
+  }, [dragState.isDragging, dragState.originalDay, dragState.cardOffsetY, workingHours.start, workingHours.end]);
 
   const handleMouseUp = useCallback(() => {
     if (dragState.isDragging) {
@@ -461,15 +444,12 @@ const Calendar: React.FC = () => {
         if (showEmojiPicker) {
           setShowEmojiPicker(false);
         }
-        if (showViewOptions) {
-          setShowViewOptions(false);
-        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [dragState.isDragging, showConfirmModal, actionMenuSessionId, actionMenuBlockId, showCreateMenu, showBlockModal, showEmojiPicker, showViewOptions, handleMouseMove, handleMouseUp]);
+  }, [dragState.isDragging, showConfirmModal, actionMenuSessionId, actionMenuBlockId, showCreateMenu, showBlockModal, showEmojiPicker, handleMouseMove, handleMouseUp]);
 
   // Close menus when clicking outside
   React.useEffect(() => {
@@ -501,15 +481,11 @@ const Calendar: React.FC = () => {
       if (showEmojiPicker && emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
         setShowEmojiPicker(false);
       }
-
-      if (showViewOptions && !(e.target as Element).closest('[data-view-options]')) {
-        setShowViewOptions(false);
-      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [actionMenuSessionId, actionMenuBlockId, showCreateMenu, showEmojiPicker, showViewOptions]);
+  }, [actionMenuSessionId, actionMenuBlockId, showCreateMenu, showEmojiPicker]);
 
   const confirmReschedule = () => {
     if (dragState.itemId && dragState.itemType) {
@@ -647,16 +623,15 @@ const Calendar: React.FC = () => {
     setShowEmojiPicker(false);
   };
 
-  const getWeekRangeText = () => {
-    const firstDay = weekDaysData[0];
-    const lastDay = weekDaysData[weekDays - 1];
-    return `${firstDay.date} - ${lastDay.date}`;
-  };
+  const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
+  const [modalClientName, setModalClientName] = useState<string | undefined>(undefined);
+  const [modalMode, setModalMode] = useState<'register' | 'schedule'>('schedule');
 
-  const isToday = (dayKey: string) => {
-    const today = new Date();
-    const todayKey = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][today.getDay()];
-    return dayKey === todayKey;
+  // Função para abrir o modal
+  const openAddSessionModal = (clientName?: string, mode: 'register' | 'schedule' = 'schedule') => {
+    setModalClientName(clientName);
+    setModalMode(mode);
+    setIsAddSessionModalOpen(true);
   };
 
   return (
@@ -708,7 +683,7 @@ const Calendar: React.FC = () => {
             <ChevronLeft size={20} />
           </button>
           <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>
-            {getWeekRangeText()} Janeiro 2024
+            15 - 19 Janeiro 2024
           </h2>
           <button
             onClick={() => setCurrentWeek(currentWeek + 1)}
@@ -719,183 +694,85 @@ const Calendar: React.FC = () => {
           </button>
         </div>
         
-        <div className="flex items-center space-x-3">
-          {/* View Options Button */}
-          <div className="relative" data-view-options>
-            <button
-              onClick={() => setShowViewOptions(!showViewOptions)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors"
-              style={{ 
-                border: '1px solid #DEE2E6',
-                backgroundColor: '#FFFFFF',
-                color: '#343A40'
-              }}
+        {/* Novo Botão Unificado */}
+        <div className="relative" ref={createMenuRef}>
+          <div className="flex">
+            <button 
+              onClick={() => openAddSessionModal(undefined, 'schedule')}
+              className="px-4 py-2 rounded-l-lg text-white transition-colors"
+              style={{ backgroundColor: '#347474' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F8F9FA';
+                e.currentTarget.style.backgroundColor = '#2d6363';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
+                e.currentTarget.style.backgroundColor = '#347474';
               }}
             >
-              <Settings size={16} style={{ color: '#6C757D' }} />
-              <span className="text-sm font-medium">Exibir</span>
-              <ChevronDown size={14} style={{ color: '#6C757D' }} />
+              <Plus size={20} className="inline mr-2" />
+              Novo
             </button>
-
-            {/* View Options Dropdown */}
-            {showViewOptions && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-20" style={{ border: '1px solid #DEE2E6' }}>
-                <div className="p-4">
-                  {/* Period Section */}
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium mb-3" style={{ color: '#343A40' }}>
-                      Período Visível
-                    </h4>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="weekDays"
-                          checked={weekDays === 5}
-                          onChange={() => setWeekDays(5)}
-                          className="w-4 h-4"
-                          style={{ accentColor: '#347474' }}
-                        />
-                        <span className="text-sm" style={{ color: '#343A40' }}>Semana de 5 dias</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="weekDays"
-                          checked={weekDays === 7}
-                          onChange={() => setWeekDays(7)}
-                          className="w-4 h-4"
-                          style={{ accentColor: '#347474' }}
-                        />
-                        <span className="text-sm" style={{ color: '#343A40' }}>Semana de 7 dias</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Display Options Section */}
-                  <div className="pt-3" style={{ borderTop: '1px solid #DEE2E6' }}>
-                    <h4 className="text-sm font-medium mb-3" style={{ color: '#343A40' }}>
-                      Mostrar na Agenda
-                    </h4>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={viewOptions.showTimeBlocks}
-                          onChange={(e) => setViewOptions({
-                            ...viewOptions,
-                            showTimeBlocks: e.target.checked
-                          })}
-                          className="w-4 h-4"
-                          style={{ accentColor: '#347474' }}
-                        />
-                        <span className="text-sm" style={{ color: '#343A40' }}>Meus bloqueios de tempo</span>
-                      </label>
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={viewOptions.showCancelledSessions}
-                          onChange={(e) => setViewOptions({
-                            ...viewOptions,
-                            showCancelledSessions: e.target.checked
-                          })}
-                          className="w-4 h-4"
-                          style={{ accentColor: '#347474' }}
-                        />
-                        <span className="text-sm" style={{ color: '#343A40' }}>Sessões canceladas</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <button
+              onClick={() => setShowCreateMenu(!showCreateMenu)}
+              className="px-3 py-2 rounded-r-lg text-white transition-colors border-l border-white border-opacity-20"
+              style={{ backgroundColor: '#347474' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#2d6363';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#347474';
+              }}
+            >
+              <ChevronDown size={16} />
+            </button>
           </div>
 
-          {/* Novo Botão Unificado */}
-          <div className="relative" ref={createMenuRef}>
-            <div className="flex">
-              <button 
-                onClick={() => console.log('Agendar Sessão')}
-                className="px-4 py-2 rounded-l-lg text-white transition-colors"
-                style={{ backgroundColor: '#347474' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2d6363';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#347474';
-                }}
-              >
-                <Plus size={20} className="inline mr-2" />
-                Novo
-              </button>
-              <button
-                onClick={() => setShowCreateMenu(!showCreateMenu)}
-                className="px-3 py-2 rounded-r-lg text-white transition-colors border-l border-white border-opacity-20"
-                style={{ backgroundColor: '#347474' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2d6363';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#347474';
-                }}
-              >
-                <ChevronDown size={16} />
-              </button>
+          {/* Menu Dropdown */}
+          {showCreateMenu && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50" style={{ border: '1px solid #DEE2E6' }}>
+              <div className="py-2">
+                <button
+                  onClick={() => {
+                    openAddSessionModal(undefined, 'schedule');
+                    setShowCreateMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
+                  style={{ color: '#343A40' }}
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(52, 116, 116, 0.1)' }}>
+                    <Clock size={16} style={{ color: '#347474' }} />
+                  </div>
+                  <div>
+                    <div className="font-medium">Agendar Sessão</div>
+                    <div className="text-xs" style={{ color: '#6C757D' }}>Criar agendamento com cliente</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedTimeSlot({ day: 'monday', time: '09:00' });
+                    setBlockForm({
+                      title: '',
+                      startTime: '09:00',
+                      endTime: '10:00',
+                      color: '#8390FA',
+                      emoji: ''
+                    });
+                    setShowBlockModal(true);
+                    setShowCreateMenu(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
+                  style={{ color: '#343A40' }}
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(131, 144, 250, 0.1)' }}>
+                    <X size={16} style={{ color: '#8390FA' }} />
+                  </div>
+                  <div>
+                    <div className="font-medium">Bloquear Horário</div>
+                    <div className="text-xs" style={{ color: '#6C757D' }}>Criar bloqueio personalizado</div>
+                  </div>
+                </button>
+              </div>
             </div>
-
-            {/* Menu Dropdown */}
-            {showCreateMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50" style={{ border: '1px solid #DEE2E6' }}>
-                <div className="py-2">
-                  <button
-                    onClick={() => {
-                      console.log('Agendar Sessão');
-                      setShowCreateMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
-                    style={{ color: '#343A40' }}
-                  >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(52, 116, 116, 0.1)' }}>
-                      <Clock size={16} style={{ color: '#347474' }} />
-                    </div>
-                    <div>
-                      <div className="font-medium">Agendar Sessão</div>
-                      <div className="text-xs" style={{ color: '#6C757D' }}>Criar agendamento com cliente</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedTimeSlot({ day: 'monday', time: '09:00' });
-                      setBlockForm({
-                        title: '',
-                        startTime: '09:00',
-                        endTime: '10:00',
-                        color: '#8390FA',
-                        emoji: ''
-                      });
-                      setShowBlockModal(true);
-                      setShowCreateMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
-                    style={{ color: '#343A40' }}
-                  >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(131, 144, 250, 0.1)' }}>
-                      <X size={16} style={{ color: '#8390FA' }} />
-                    </div>
-                    <div>
-                      <div className="font-medium">Bloquear Horário</div>
-                      <div className="text-xs" style={{ color: '#6C757D' }}>Criar bloqueio personalizado</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
@@ -907,32 +784,23 @@ const Calendar: React.FC = () => {
       >
         {/* Header with days */}
         <div className="grid" style={{ 
-          gridTemplateColumns: `120px repeat(${weekDays}, 1fr)`,
+          gridTemplateColumns: '120px repeat(5, 1fr)',
           borderBottom: '1px solid #DEE2E6' 
         }}>
           <div className="p-4" style={{ backgroundColor: '#F8F9FA', borderRight: '1px solid #DEE2E6' }}>
             <span className="text-sm font-medium" style={{ color: '#6C757D' }}>Horário</span>
           </div>
-          {getDisplayedDays(weekDays).map((day, index) => (
+          {weekDays.map((day, index) => (
             <div
               key={day.key}
-              className={`p-4 text-center relative ${
-                isToday(day.key) ? 'relative' : ''
-              }`}
+              className="p-4 text-center"
               style={{
-                backgroundColor: isToday(day.key) ? 'rgba(52, 116, 116, 0.05)' : '#F8F9FA',
-                borderRight: index < weekDays - 1 ? '1px solid #DEE2E6' : 'none',
-                color: isToday(day.key) ? '#347474' : '#343A40'
+                backgroundColor: '#F8F9FA',
+                borderRight: index < weekDays.length - 1 ? '1px solid #DEE2E6' : 'none',
               }}
             >
-              {isToday(day.key) && (
-                <div 
-                  className="absolute top-0 left-0 right-0 h-1"
-                  style={{ backgroundColor: '#347474' }}
-                ></div>
-              )}
-              <div className="font-semibold">{day.label}</div>
-              <div className="text-sm" style={{ color: isToday(day.key) ? '#347474' : '#6C757D' }}>{day.date}</div>
+              <div className="font-semibold" style={{ color: '#343A40' }}>{day.label}</div>
+              <div className="text-sm" style={{ color: '#6C757D' }}>{day.date}</div>
             </div>
           ))}
         </div>
@@ -965,14 +833,13 @@ const Calendar: React.FC = () => {
 
           {/* Day columns */}
           <div className="absolute top-0 bottom-0 right-0" style={{ left: '120px' }}>
-            <div className="grid h-full" style={{ gridTemplateColumns: `repeat(${weekDays}, 1fr)` }}>
-              {getDisplayedDays(weekDays).map((day, dayIndex) => (
+            <div className="grid grid-cols-5 h-full">
+              {weekDays.map((day, dayIndex) => (
                 <div 
                   key={day.key}
                   className="relative"
                   style={{ 
-                    borderRight: dayIndex < weekDays - 1 ? '1px solid #DEE2E6' : 'none',
-                    backgroundColor: isToday(day.key) ? 'rgba(52, 116, 116, 0.02)' : 'transparent'
+                    borderRight: dayIndex < weekDays.length - 1 ? '1px solid #DEE2E6' : 'none'
                   }}
                 >
                   {/* Hour lines */}
@@ -1121,7 +988,7 @@ const Calendar: React.FC = () => {
                   })}
 
                   {/* Time blocks - Now draggable */}
-                  {viewOptions.showTimeBlocks && getBlocksForDay(day.key).map((block) => {
+                  {getBlocksForDay(day.key).map((block) => {
                     const position = getBlockPosition(block);
                     const isDragging = dragState.isDragging && dragState.itemId === block.id && dragState.itemType === 'block';
                     const isMenuOpen = actionMenuBlockId === block.id;
@@ -1292,7 +1159,7 @@ const Calendar: React.FC = () => {
                     </div>
                     
                     <div className="text-xs" style={{ color: '#6C757D' }}>
-                      {weekDaysData.find(d => d.key === dragState.newDay)?.label}
+                      {weekDays.find(d => d.key === dragState.newDay)?.label}
                     </div>
                   </>
                 );
@@ -1314,7 +1181,7 @@ const Calendar: React.FC = () => {
                     </div>
                     
                     <div className="text-xs" style={{ color: '#6C757D' }}>
-                      {weekDaysData.find(d => d.key === dragState.newDay)?.label}
+                      {weekDays.find(d => d.key === dragState.newDay)?.label}
                     </div>
                   </>
                 );
@@ -1341,7 +1208,7 @@ const Calendar: React.FC = () => {
                   return (
                     <>
                       Deseja reagendar a sessão com <strong>{session?.client}</strong> para{' '}
-                      <strong>{weekDaysData.find(d => d.key === dragState.newDay)?.label}</strong> às{' '}
+                      <strong>{weekDays.find(d => d.key === dragState.newDay)?.label}</strong> às{' '}
                       <strong>{dragState.newTime}</strong>?
                     </>
                   );
@@ -1350,7 +1217,7 @@ const Calendar: React.FC = () => {
                   return (
                     <>
                       Deseja mover o bloqueio <strong>{block?.title}</strong> para{' '}
-                      <strong>{weekDaysData.find(d => d.key === dragState.newDay)?.label}</strong> às{' '}
+                      <strong>{weekDays.find(d => d.key === dragState.newDay)?.label}</strong> às{' '}
                       <strong>{dragState.newTime}</strong>?
                     </>
                   );
@@ -1620,6 +1487,14 @@ const Calendar: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal de Adicionar Sessão */}
+      <AddSessionModal
+        isOpen={isAddSessionModalOpen}
+        onClose={() => setIsAddSessionModalOpen(false)}
+        clientName={modalClientName}
+        mode={modalMode}
+      />
 
       {/* Legenda Simplificada */}
       <div className="mt-6 flex items-center justify-between">
