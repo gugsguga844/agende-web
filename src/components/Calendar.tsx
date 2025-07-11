@@ -818,35 +818,21 @@ const Calendar: React.FC = () => {
 
           {/* Novo Botão Unificado */}
           <div className="relative" ref={createMenuRef}>
-            <div className="flex">
-              <button 
-                onClick={() => console.log('Agendar Sessão')}
-                className="px-4 py-2 rounded-l-lg text-white transition-colors"
-                style={{ backgroundColor: '#347474' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2d6363';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#347474';
-                }}
-              >
-                <Plus size={20} className="inline mr-2" />
-                Novo
-              </button>
-              <button
-                onClick={() => setShowCreateMenu(!showCreateMenu)}
-                className="px-3 py-2 rounded-r-lg text-white transition-colors border-l border-white border-opacity-20"
-                style={{ backgroundColor: '#347474' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2d6363';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#347474';
-                }}
-              >
-                <ChevronDown size={16} />
-              </button>
-            </div>
+            <button
+              onClick={() => setShowCreateMenu(!showCreateMenu)}
+              className="flex items-center px-4 py-2 rounded-lg text-white transition-colors"
+              style={{ backgroundColor: '#347474' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#2d6363';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#347474';
+              }}
+            >
+              <Plus size={20} className="inline mr-2" />
+              Novo
+              <ChevronDown size={16} className="ml-2" />
+            </button>
 
             {/* Menu Dropdown */}
             {showCreateMenu && (

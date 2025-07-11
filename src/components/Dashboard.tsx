@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, User, ChevronRight, TrendingUp, Users, CreditCard, Calendar, Plus, FileText, MoreHorizontal, Edit, Archive } from 'lucide-react';
+import { Clock, User, ChevronRight, TrendingUp, Users, CreditCard, Calendar, Plus, FileText, MoreHorizontal, Edit, Archive, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
@@ -209,13 +209,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
               <p className="text-sm" style={{ color: '#6C757D' }}>85% da base total</p>
             </div>
             <div className="flex flex-col items-center">
-              <div className="relative w-10 h-10 mb-1">
-                <svg className="w-10 h-10 transform -rotate-90" viewBox="0 0 32 32">
+              <div className="relative w-14 h-14 mb-1">
+                <svg className="w-14 h-14 transform -rotate-90" viewBox="0 0 44 44">
                   {/* Fundo */}
                   <circle
-                    cx="16"
-                    cy="16"
-                    r="12"
+                    cx="22"
+                    cy="22"
+                    r="16"
                     fill="none"
                     stroke="#DEE2E6"
                     strokeWidth="3"
@@ -223,21 +223,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                   {/* Progresso */}
                   {activeClientsPercentage > 0 && (
                     <circle
-                      cx="16"
-                      cy="16"
-                      r="12"
+                      cx="22"
+                      cy="22"
+                      r="16"
                       fill="none"
                       stroke="#347474"
                       strokeWidth="3"
-                      strokeDasharray={donutProps.strokeDasharray}
-                      strokeDashoffset={donutProps.strokeDashoffset}
+                      strokeDasharray={2 * Math.PI * 16}
+                      strokeDashoffset={2 * Math.PI * 16 - (activeClientsPercentage / 100) * 2 * Math.PI * 16}
                       strokeLinecap="round"
                       style={{ transition: 'stroke-dashoffset 0.5s' }}
                     />
                   )}
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xs font-semibold" style={{ color: '#347474' }}>{activeClientsPercentage}%</span>
+                  <span className="text-sm font-semibold" style={{ color: '#347474' }}>{activeClientsPercentage}%</span>
                 </div>
               </div>
               <span className="text-xs" style={{ color: '#6C757D' }}>Ativo/Total</span>
@@ -323,9 +323,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                   <span className="text-sm font-medium">Ver Prontuário</span>
                 </button>
                 
-                <div className="relative" data-client-menu={client.id}>
+                <div className="relative group" data-client-menu={client.id}>
                   <button
-                    onClick={() => setOpenClientMenu(openClientMenu === client.id ? null : client.id)}
                     className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                     style={{ color: '#6C757D' }}
                     title="Mais ações"
@@ -334,44 +333,39 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                   </button>
 
                   {/* Menu de Ações */}
-                  {openClientMenu === client.id && (
-                    <div className="absolute right-0 bottom-10 bg-white rounded-lg shadow-xl border z-50 min-w-[220px]" style={{ border: '1px solid #DEE2E6' }}>
-                      <button
-                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
-                        style={{ color: '#343A40' }}
-                        onClick={() => {
-                          openAddSessionModal(client.name, 'schedule');
-                          setOpenClientMenu(null);
-                        }}
-                      >
-                        <Calendar size={16} className="mr-2" />
-                        Agendar Nova Sessão
-                      </button>
-                      <button
-                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
-                        style={{ color: '#343A40' }}
-                        onClick={() => {
-                          console.log('Editar Cliente', client.name);
-                          setOpenClientMenu(null);
-                        }}
-                      >
-                        <Edit size={16} className="mr-2" />
-                        Editar Cliente
-                      </button>
-                      <div className="border-t my-1 border-gray-200" />
-                      <button
-                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
-                        style={{ color: '#E76F51' }}
-                        onClick={() => {
-                          console.log('Arquivar Cliente', client.name);
-                          setOpenClientMenu(null);
-                        }}
-                      >
-                        <Archive size={16} className="mr-2" />
-                        Arquivar Cliente
-                      </button>
-                    </div>
-                  )}
+                  <div className="absolute right-0 bottom-10 bg-white rounded-lg shadow-xl border z-50 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200" style={{ border: '1px solid #DEE2E6' }}>
+                    <button
+                      className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
+                      style={{ color: '#343A40' }}
+                      onClick={() => {
+                        openAddSessionModal(client.name, 'schedule');
+                      }}
+                    >
+                      <Calendar size={16} className="mr-2" />
+                      Agendar Nova Sessão
+                    </button>
+                    <button
+                      className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                      style={{ color: '#343A40' }}
+                      onClick={() => {
+                        console.log('Editar Cliente', client.name);
+                      }}
+                    >
+                      <Edit size={16} className="mr-2" />
+                      Editar Cliente
+                    </button>
+                    <div className="border-t my-1 border-gray-200" />
+                    <button
+                      className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
+                      style={{ color: '#E76F51' }}
+                      onClick={() => {
+                        console.log('Arquivar Cliente', client.name);
+                      }}
+                    >
+                      <Archive size={16} className="mr-2" />
+                      Arquivar Cliente
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -492,13 +486,23 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                                 <span>Marcar como Pago</span>
                               </button>
                             )}
-                            <button className="w-full text-left px-4 py-2 text-sm text-[#1F2937] hover:bg-gray-50 flex items-center space-x-2">
-                              <Calendar className="w-3 h-3 text-[#6B7280]" />
-                              <span>Reagendar</span>
+                            <button
+                              className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                              style={{ color: '#343A40' }}
+                              onClick={() => {
+                                console.log('Reagendar Sessão');
+                              }}
+                            >
+                              <Clock size={16} className="mr-2" /> Reagendar Sessão
                             </button>
-                            <button className="w-full text-left px-4 py-2 text-sm text-[#EF4444] hover:bg-red-50 flex items-center space-x-2">
-                              <div className="w-3 h-3 border border-[#EF4444] rounded"></div>
-                              <span>Cancelar</span>
+                            <button
+                              className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
+                              style={{ color: '#E76F51' }}
+                              onClick={() => {
+                                console.log('Cancelar Sessão');
+                              }}
+                            >
+                              <Trash2 size={16} className="mr-2" /> Cancelar Sessão
                             </button>
                           </div>
                         </div>

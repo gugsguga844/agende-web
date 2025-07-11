@@ -209,7 +209,7 @@ const SessionsHistory: React.FC<SessionsHistoryProps> = ({ onNavigateToClient })
       {hasData ? (
         <div className="space-y-8">
           {Object.entries(currentData).map(([date, sessions]) => {
-            const filteredSessions = filterSessions(sessions);
+            const filteredSessions = filterSessions(sessions as any[]);
             
             if (filteredSessions.length === 0 && searchTerm.trim()) {
               return null; // Don't show date header if no sessions match search

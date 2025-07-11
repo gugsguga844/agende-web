@@ -496,7 +496,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
               {/* Session Title */}
               <div>
                 <label htmlFor="sessionTitle" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                  Título da Sessão <span className="text-sm font-normal" style={{ color: '#6C757D' }}>(opcional)</span>
+                  {mode === 'register' ? 'Foco Principal da Sessão' : 'Tema da Sessão (Opcional)'}
                 </label>
                 <input
                   id="sessionTitle"
@@ -779,18 +779,20 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       )}
 
       {/* CSS Animation */}
-      <style jsx>{`
-        @keyframes slideInFromRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
+      <style>
+        {`
+          @keyframes slideInFromRight {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
           }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
+        `}
+      </style>
 
       {/* Add Client Modal */}
       <AddClientModal 
