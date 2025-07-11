@@ -84,6 +84,7 @@ const Calendar: React.FC = () => {
   });
 
   const calendarRef = useRef<HTMLDivElement>(null);
+  const calendarContainerRef = React.useRef<HTMLDivElement>(null);
 
   // Emojis populares organizados por categoria
   const emojiCategories = {
@@ -856,6 +857,7 @@ const Calendar: React.FC = () => {
     }
     // Popover de eventos
     const [popoverDay, setPopoverDay] = React.useState<number | null>(null);
+    const [popoverAnchor, setPopoverAnchor] = React.useState<{left: number, top: number} | null>(null);
     const closePopover = () => setPopoverDay(null);
     const popoverRef = React.useRef<HTMLDivElement>(null);
 
@@ -870,75 +872,136 @@ const Calendar: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
       }
     }, [popoverDay]);
+
+    // Função para abrir o popover e calcular a posição relativa ao container
+    const handlePopoverOpen = (day: number, event: React.MouseEvent) => {
+      const targetRect = (event.target as HTMLElement).getBoundingClientRect();
+      const containerRect = calendarContainerRef.current?.getBoundingClientRect();
+      if (!containerRect) return;
+      // Posição centralizada horizontalmente em relação ao botão/célula
+      let left = targetRect.left - containerRect.left + targetRect.width / 2;
+      // Posição vertical: preferencialmente abaixo, mas se não couber, acima
+      const popoverHeight = 260; // valor aproximado, pode ajustar
+      let top = targetRect.bottom - containerRect.top;
+      let showAbove = false;
+      if (top + popoverHeight > containerRect.height) {
+        top = targetRect.top - containerRect.top - popoverHeight;
+        showAbove = true;
+      }
+      setPopoverAnchor({ left, top });
+      setPopoverDay(day);
+    };
+
     return (
-      <div className="bg-white rounded-xl shadow-sm overflow-visible p-4" style={{ border: '1px solid #DEE2E6' }}>
-        <div className="grid grid-cols-7 gap-2">
-          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((w, i) => (
-            <div key={i} className="text-xs font-bold text-center" style={{ color: '#347474' }}>{w}</div>
+      <div ref={calendarContainerRef} className="bg-white rounded-xl shadow-sm overflow-visible relative" style={{ border: '1px solid #DEE2E6' }}>
+        <div className="grid grid-cols-7 bg-[#F1F3F5]" style={{ minHeight: '520px' }}>
+          {/* Cabeçalho dos dias */}
+          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((w, i) => (
+            <div
+              key={i}
+              className="text-base font-bold text-center py-3 bg-[#F8F9FA]"
+              style={{
+                color: '#343A40',
+                letterSpacing: 1,
+                borderRight: i < 6 ? '1px solid #DEE2E6' : 'none',
+                borderBottom: '1px solid #DEE2E6',
+                borderTop: 'none',
+                borderLeft: 'none',
+                borderRadius: 0
+              }}
+            >
+              {w}
+            </div>
           ))}
+          {/* Grid dos dias */}
           {daysArray.map((day, idx) => {
+            const isPrevMonth = idx < firstWeekDay;
+            const isNextMonth = idx >= firstWeekDay + daysInMonth;
+            const isOutMonth = isPrevMonth || isNextMonth;
             const events = getSessionsForDate(day || 0);
             const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
+            // Cálculo para bordas: última coluna e última linha
+            const isLastCol = (idx + 1) % 7 === 0;
+            const isLastRow = idx >= daysArray.length - 7;
             return (
-              <div key={idx} className={`min-h-[120px] border rounded-lg p-1 bg-gray-50 relative group`} style={{ borderColor: '#DEE2E6', backgroundColor: isToday ? '#e0f7fa' : undefined }}>
+              <div
+                key={idx}
+                className={`relative group min-h-[80px] aspect-square flex flex-col items-start justify-start p-2 ${isToday ? 'bg-[#eaf6fb] border-t-4 border-[#347474]' : isOutMonth ? 'bg-[#F8F9FA]' : 'bg-white'} ${isOutMonth ? 'text-[#ADB5BD]' : 'text-[#343A40]'} ${isToday ? 'font-bold' : 'font-medium'}`}
+                style={{
+                  borderRight: !isLastCol ? '1px solid #DEE2E6' : 'none',
+                  borderBottom: !isLastRow ? '1px solid #DEE2E6' : 'none',
+                  borderTop: 'none',
+                  borderLeft: 'none',
+                  borderRadius: 0,
+                  zIndex: isToday ? 2 : 1,
+                  boxShadow: 'none',
+                  cursor: 'pointer',
+                  overflow: 'visible'
+                }}
+              >
                 {day && (
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-base" style={{ fontWeight: isToday ? 700 : 500 }}>{day}</span>
+                    {isToday && <span className="text-xs font-bold text-[#347474]">Hoje</span>}
+                  </div>
+                )}
+                {/* Renderizar eventos e popover apenas para dias do mês atual */}
+                {!isOutMonth && (
                   <>
-                    <div className="flex items-center justify-between mb-1">
-                      <button
-                        className="text-xs font-semibold focus:outline-none"
-                        style={{ color: isToday ? '#fff' : '#343A40', background: isToday ? '#347474' : 'none', borderRadius: '9999px', padding: isToday ? '2px 8px' : undefined }}
-                        onClick={() => setPopoverDay(day)}
-                      >
-                        {day}
-                      </button>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      {events.slice(0, 3).map((session, i) => (
+                    <div className="flex flex-col gap-1 w-full">
+                      {events.slice(0, 3).map((session: any, i: number) => (
                         <div key={i} className="truncate px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer" style={{
                           background: session.paymentStatus === 'pago' ? '#34747422' : session.paymentStatus === 'pendente' ? '#F4A26122' : '#6C757D22',
                           color: session.paymentStatus === 'pago' ? '#347474' : session.paymentStatus === 'pendente' ? '#F4A261' : '#6C757D',
                           border: `1px solid ${session.paymentStatus === 'pago' ? '#34747444' : session.paymentStatus === 'pendente' ? '#F4A26144' : '#6C757D44'}`
                         }}
                           title={session.client}
-                          onClick={() => setPopoverDay(day)}
+                          onClick={(e) => handlePopoverOpen(day as number, e)}
                         >
                           {session.startTime} {session.client.length > 10 ? session.client.slice(0, 10) + '…' : session.client}
                         </div>
                       ))}
                       {events.length > 3 && (
-                        <button className="text-xs text-[#347474] underline mt-1" onClick={() => setPopoverDay(day)}>
+                        <button className="text-xs text-[#347474] underline mt-1" onClick={(e) => handlePopoverOpen(day as number, e)}>
                           +{events.length - 3} mais…
                         </button>
                       )}
                     </div>
-                    {/* Popover de eventos */}
-                    {popoverDay === day && (
-                      <div
-                        ref={popoverRef}
-                        className="absolute z-50 left-1/2 top-10 -translate-x-1/2 bg-white border rounded-lg shadow-xl p-3 min-w-[180px]"
-                        style={{ borderColor: '#DEE2E6' }}
-                      >
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="font-bold text-sm" style={{ color: '#347474' }}>Eventos do dia {day}</span>
-                          <button className="text-xs text-[#347474]" onClick={closePopover}>Fechar</button>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          {events.map((session, i) => (
-                            <div key={i} className="flex flex-col px-2 py-1 rounded border" style={{ borderColor: '#DEE2E6', background: '#f8fafc' }}>
-                              <span className="font-medium text-xs" style={{ color: '#343A40' }}>{session.startTime} - {session.endTime}</span>
-                              <span className="text-xs" style={{ color: '#347474' }}>{session.client}</span>
-                              <span className="text-xs" style={{ color: '#6C757D' }}>{session.sessionType === 'online' ? 'Online' : 'Presencial'}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
             );
           })}
         </div>
+        {/* Popover global fora do grid */}
+        {popoverDay !== null && popoverAnchor && (
+          <div
+            ref={popoverRef}
+            className="absolute bg-white border rounded-lg shadow-xl p-3 min-w-[180px]"
+            style={{
+              left: popoverAnchor.left,
+              top: popoverAnchor.top,
+              borderColor: '#DEE2E6',
+              zIndex: 9999,
+              boxShadow: '0 8px 32px 0 rgba(52, 116, 116, 0.18), 0 1.5px 6px 0 rgba(52, 116, 116, 0.10)',
+              transform: 'translate(-50%, 0)'
+            }}
+          >
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-bold text-sm" style={{ color: '#347474' }}>Eventos do dia {popoverDay}</span>
+              <button className="text-xs text-[#347474]" onClick={closePopover}>Fechar</button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {popoverDay !== null && getSessionsForDate(popoverDay).map((session: any, i: number) => (
+                <div key={i} className="flex flex-col px-2 py-1 rounded border" style={{ borderColor: '#DEE2E6', background: '#f8fafc' }}>
+                  <span className="font-medium text-xs" style={{ color: '#343A40' }}>{session.startTime} - {session.endTime}</span>
+                  <span className="text-xs" style={{ color: '#347474' }}>{session.client}</span>
+                  <span className="text-xs" style={{ color: '#6C757D' }}>{session.sessionType === 'online' ? 'Online' : 'Presencial'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

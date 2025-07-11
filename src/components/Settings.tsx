@@ -568,9 +568,9 @@ const Settings: React.FC = () => {
   };
 
   const renderSectionView = () => (
-    <div className="flex h-full">
+    <div className="flex h-screen">
       {/* Secondary Navigation */}
-      <div className="w-64 bg-white shadow-sm" style={{ borderRight: '1px solid #DEE2E6' }}>
+      <div className="w-64 bg-white shadow-sm flex flex-col h-full" style={{ borderRight: '1px solid #DEE2E6' }}>
         <div className="p-6">
           <button
             onClick={handleBackToMain}
@@ -610,7 +610,7 @@ const Settings: React.FC = () => {
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-8 overflow-y-auto">
         <div className="max-w-3xl">
           {/* Section Header */}
           <div className="mb-8">
