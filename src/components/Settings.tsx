@@ -162,7 +162,7 @@ const Settings: React.FC = () => {
           <div className="space-y-8">
             {/* Header do Perfil */}
             <div className="bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #DEE2E6' }}>
-              <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-6">
                   {/* Avatar/Foto */}
                   <div className="relative group">
@@ -209,21 +209,21 @@ const Settings: React.FC = () => {
                 </div>
 
                 {/* Ação Principal */}
-                {!isEditing && (
-                  <button
-                    onClick={() => setIsEditing(true)}
+              {!isEditing && (
+                <button
+                  onClick={() => setIsEditing(true)}
                     className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white transition-colors"
                     style={{ backgroundColor: '#347474' }}
-                    onMouseEnter={(e) => {
+                  onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#2d6363';
-                    }}
-                    onMouseLeave={(e) => {
+                  }}
+                  onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = '#347474';
-                    }}
-                  >
-                    <Edit size={16} />
+                  }}
+                >
+                  <Edit size={16} />
                     <span>Editar Perfil</span>
-                  </button>
+                </button>
                 )}
               </div>
             </div>
@@ -235,60 +235,60 @@ const Settings: React.FC = () => {
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                    Email
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="email"
-                      value={profileData.email}
-                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg transition-colors"
-                      style={{ 
-                        border: '1px solid #DEE2E6',
-                        color: '#343A40'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#347474';
-                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#DEE2E6';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  ) : (
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  Email
+                </label>
+                {isEditing ? (
+                  <input
+                    type="email"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                ) : (
                     <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.email}</p>
-                  )}
-                </div>
+                )}
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                    Telefone
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="tel"
-                      value={profileData.phone}
-                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg transition-colors"
-                      style={{ 
-                        border: '1px solid #DEE2E6',
-                        color: '#343A40'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#347474';
-                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#DEE2E6';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  ) : (
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  Telefone
+                </label>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                ) : (
                     <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.phone}</p>
-                  )}
+                )}
                 </div>
               </div>
 
@@ -335,69 +335,12 @@ const Settings: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
                     Especialidade
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={profileData.specialty}
-                      onChange={(e) => setProfileData({ ...profileData, specialty: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg transition-colors"
-                      style={{ 
-                        border: '1px solid #DEE2E6',
-                        color: '#343A40'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#347474';
-                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#DEE2E6';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  ) : (
-                    <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.specialty}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                    Registro Profissional
-                  </label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={profileData.crp}
-                      onChange={(e) => setProfileData({ ...profileData, crp: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg transition-colors"
-                      style={{ 
-                        border: '1px solid #DEE2E6',
-                        color: '#343A40'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#347474';
-                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#DEE2E6';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                    />
-                  ) : (
-                    <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.crp}</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                  CPF/NIF <span className="text-sm font-normal" style={{ color: '#6C757D' }}>(para recibos)</span>
                 </label>
                 {isEditing ? (
                   <input
                     type="text"
-                    value={profileData.cpf}
-                    onChange={(e) => setProfileData({ ...profileData, cpf: e.target.value })}
+                    value={profileData.specialty}
+                    onChange={(e) => setProfileData({ ...profileData, specialty: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg transition-colors"
                     style={{ 
                       border: '1px solid #DEE2E6',
@@ -411,12 +354,69 @@ const Settings: React.FC = () => {
                       e.target.style.borderColor = '#DEE2E6';
                       e.target.style.boxShadow = 'none';
                     }}
-                    placeholder="000.000.000-00"
                   />
                 ) : (
-                  <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.cpf}</p>
+                    <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.specialty}</p>
                 )}
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  Registro Profissional
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={profileData.crp}
+                    onChange={(e) => setProfileData({ ...profileData, crp: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                ) : (
+                    <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.crp}</p>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  CPF/NIF <span className="text-sm font-normal" style={{ color: '#6C757D' }}>(para recibos)</span>
+              </label>
+              {isEditing ? (
+                  <input
+                    type="text"
+                    value={profileData.cpf}
+                    onChange={(e) => setProfileData({ ...profileData, cpf: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg transition-colors"
+                  style={{ 
+                    border: '1px solid #DEE2E6',
+                    color: '#343A40'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#347474';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#DEE2E6';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                    placeholder="000.000.000-00"
+                />
+              ) : (
+                  <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.cpf}</p>
+                )}
+                </div>
             </div>
 
             {/* Botões de Ação */}

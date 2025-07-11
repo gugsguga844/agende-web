@@ -123,9 +123,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
         </div>
         <div className="relative group">
           <button
-            className="inline-flex items-center font-medium px-4 py-2 rounded-lg transition-colors bg-[#347474] hover:bg-[#285d5d] text-white"
+  className="inline-flex items-center font-medium px-4 py-2 rounded-lg transition-colors bg-[#347474] hover:bg-[#285d5d] text-white"
             onClick={() => openAddSessionModal(undefined, 'schedule')}
-          >
+>
             <Plus className="w-4 h-4 mr-2" />
             <span>Novo</span>
             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,38 +334,38 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
 
                   {/* Menu de Ações */}
                   <div className="absolute right-0 bottom-10 bg-white rounded-lg shadow-xl border z-50 min-w-[220px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200" style={{ border: '1px solid #DEE2E6' }}>
-                    <button
-                      className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
-                      style={{ color: '#343A40' }}
-                      onClick={() => {
+                      <button
+                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
+                        style={{ color: '#343A40' }}
+                        onClick={() => {
                         openAddSessionModal(client.name, 'schedule');
-                      }}
-                    >
-                      <Calendar size={16} className="mr-2" />
-                      Agendar Nova Sessão
-                    </button>
-                    <button
-                      className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
-                      style={{ color: '#343A40' }}
-                      onClick={() => {
-                        console.log('Editar Cliente', client.name);
-                      }}
-                    >
-                      <Edit size={16} className="mr-2" />
-                      Editar Cliente
-                    </button>
-                    <div className="border-t my-1 border-gray-200" />
-                    <button
-                      className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
-                      style={{ color: '#E76F51' }}
-                      onClick={() => {
-                        console.log('Arquivar Cliente', client.name);
-                      }}
-                    >
-                      <Archive size={16} className="mr-2" />
-                      Arquivar Cliente
-                    </button>
-                  </div>
+                        }}
+                      >
+                        <Calendar size={16} className="mr-2" />
+                        Agendar Nova Sessão
+                      </button>
+                      <button
+                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                        style={{ color: '#343A40' }}
+                        onClick={() => {
+                          console.log('Editar Cliente', client.name);
+                        }}
+                      >
+                        <Edit size={16} className="mr-2" />
+                        Editar Cliente
+                      </button>
+                      <div className="border-t my-1 border-gray-200" />
+                      <button
+                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
+                        style={{ color: '#E76F51' }}
+                        onClick={() => {
+                          console.log('Arquivar Cliente', client.name);
+                        }}
+                      >
+                        <Archive size={16} className="mr-2" />
+                        Arquivar Cliente
+                      </button>
+                    </div>
                 </div>
               </div>
             </div>
@@ -522,8 +522,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
       clientName={modalClientName}
       mode={modalMode}
     />
-  </div>
-);
+    </div>
+  );
 };
 
 export default Dashboard;

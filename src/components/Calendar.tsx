@@ -659,89 +659,309 @@ const Calendar: React.FC = () => {
     return dayKey === todayKey;
   };
 
+  // Função utilitária para obter o dia atual
+  function getTodayKey() {
+    const today = new Date();
+    return ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][today.getDay()];
+  }
+
+  // 1. Cabeçalho dinâmico
+  // Substituir o texto do cabeçalho por:
+  const getHeaderText = () => {
+    if (viewMode === 'monthly') {
+      const now = new Date();
+      const month = new Date(now.getFullYear(), now.getMonth() + currentWeek, 1);
+      return `${month.toLocaleString('pt-BR', { month: 'long' }).replace(/^./, str => str.toUpperCase())} ${month.getFullYear()}`;
+    } else {
+      return getWeekRangeText() + ' Janeiro 2024';
+    }
+  };
+
+  // 2. Navegação por mês na visualização mensal
+  const handlePrev = () => {
+    if (viewMode === 'monthly') {
+      setCurrentWeek(currentWeek - 1);
+    } else {
+      setCurrentWeek(currentWeek - 1);
+    }
+  };
+  const handleNext = () => {
+    if (viewMode === 'monthly') {
+      setCurrentWeek(currentWeek + 1);
+    } else {
+      setCurrentWeek(currentWeek + 1);
+    }
+  };
+
+  // Definir a função dayStr antes do uso
+  function dayStr(day: number) {
+    return day.toString().padStart(2, '0');
+  }
+
+  // Visualização Diária
+  function DailyView() {
+    const todayKey = getTodayKey();
+    const day = weekDaysData.find(d => d.key === todayKey) || weekDaysData[0];
+    return (
+      <div className="bg-white rounded-xl shadow-sm overflow-visible" style={{ border: '1px solid #DEE2E6' }}>
+        {/* Header do dia */}
+        <div className="grid" style={{ gridTemplateColumns: '120px 1fr', borderBottom: '1px solid #DEE2E6' }}>
+          <div className="p-4" style={{ backgroundColor: '#F8F9FA', borderRight: '1px solid #DEE2E6' }}>
+            <span className="text-sm font-medium" style={{ color: '#6C757D' }}>Horário</span>
+          </div>
+          <div className="p-4 text-center relative" style={{ backgroundColor: '#F8F9FA', color: '#347474' }}>
+            <div className="font-semibold">{day.label}</div>
+            <div className="text-sm" style={{ color: '#347474' }}>{day.date}</div>
+          </div>
+        </div>
+        {/* Time slots e sessões */}
+        <div className="relative" style={{ height: '960px' }}>
+          {/* Time labels */}
+          <div className="absolute left-0 top-0 bottom-0" style={{ width: '120px', zIndex: 10 }}>
+            {timeSlots.map((time, index) => (
+              <div 
+                key={time}
+                className="absolute text-sm font-medium text-center"
+                style={{ 
+                  top: `${(index / timeSlots.length) * 100}%`,
+                  height: `${100 / timeSlots.length}%`,
+                  backgroundColor: '#F8F9FA',
+                  borderRight: '1px solid #DEE2E6',
+                  borderBottom: index < timeSlots.length - 1 ? '1px solid #DEE2E6' : 'none',
+                  color: isWorkingHour(time) ? '#6C757D' : '#ADB5BD',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '120px'
+                }}
+              >
+                {time}
+              </div>
+            ))}
+          </div>
+          {/* Coluna do dia */}
+          <div className="absolute top-0 bottom-0 right-0" style={{ left: '120px' }}>
+            <div className="relative h-full">
+              {/* Hour lines */}
+              {timeSlots.map((time, index) => (
+                <div
+                  key={`${day.key}-${time}`}
+                  className="absolute w-full cursor-pointer hover:bg-gray-50 transition-colors"
+                  style={{
+                    top: `${(index / timeSlots.length) * 100}%`,
+                    height: `${100 / timeSlots.length}%`,
+                    borderBottom: index < timeSlots.length - 1 ? '1px solid #DEE2E6' : 'none',
+                    backgroundColor: !isWorkingHour(time) ? '#FAFBFC' : 'transparent'
+                  }}
+                  onClick={() => handleTimeSlotClick(day.key, time)}
+                />
+              ))}
+              {/* Sessions */}
+              {getSessionsForDay(day.key).map((session) => {
+                const position = getSessionPosition(session);
+                const isDragging = dragState.isDragging && dragState.itemId === session.id && dragState.itemType === 'session';
+                const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
+                const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
+                const isMenuOpen = actionMenuSessionId === session.id;
+                const handleCardMouseDown = (e: React.MouseEvent) => {
+                  const btn = menuButtonRefs.current[session.id];
+                  const menu = menuDropdownRefs.current[session.id];
+                  if (
+                    btn?.contains(e.target as Node) ||
+                    menu?.contains(e.target as Node)
+                  ) {
+                    return;
+                  }
+                  handleMouseDown(e, session, 'session');
+                };
+                return (
+                  <div
+                    key={session.id}
+                    className={`absolute w-full px-1 ${isDragging ? 'opacity-50' : ''}`}
+                    style={{
+                      top: position.top,
+                      height: position.height,
+                      zIndex: isDragging ? 50 : isMenuOpen ? 30 : 20
+                    }}
+                  >
+                    <div
+                      className="h-full p-2 rounded-lg cursor-move transition-all duration-200 border-l-4 shadow-sm group hover:shadow-md hover:-translate-y-0.5"
+                      style={{
+                        backgroundColor: session.paymentStatus === 'pago' ? 'rgba(52, 116, 116, 0.13)' : 'rgba(244, 162, 97, 0.13)',
+                        borderLeftColor: session.paymentStatus === 'pago' ? '#347474' : '#F4A261',
+                        cursor: isDragging ? 'grabbing' : 'grab',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        height: '100%'
+                      }}
+                      onMouseDown={handleCardMouseDown}
+                    >
+                      <div className="flex items-center justify-between mb-0.5 w-full">
+                        <SessionIcon size={16} style={{ color: iconColor }} />
+                        <span className="text-xs font-medium text-center flex-1 mx-1" style={{ color: '#343A40' }}>
+                          {session.startTime} - {session.endTime}
+                        </span>
+                        <span className="text-xs" style={{ color: '#6C757D' }}>
+                          ({session.duration}min)
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-sm truncate flex-1" style={{ color: '#343A40' }}>
+                          {session.client}
+                        </div>
+                        {/* ...menu de ações... */}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Visualização Mensal
+  function MonthlyView() {
+    // Gerar os dias do mês atual
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const firstWeekDay = firstDay.getDay(); // 0 = domingo
+    // Montar grid: cada célula é um dia
+    const daysArray = [];
+    for (let i = 0; i < firstWeekDay; i++) daysArray.push(null); // Espaço antes do 1º dia
+    for (let d = 1; d <= daysInMonth; d++) daysArray.push(d);
+    while (daysArray.length % 7 !== 0) daysArray.push(null); // Completar última semana
+    // Adicionar mock de muitos eventos em um dia para teste
+    const extraSessions = [
+      { id: 100, day: 'monday', startTime: '08:00', endTime: '08:50', client: 'Teste 1', duration: 50, status: 'confirmado', sessionType: 'presencial', paymentStatus: 'pago', notes: '' },
+      { id: 101, day: 'monday', startTime: '09:00', endTime: '09:50', client: 'Teste 2', duration: 50, status: 'confirmado', sessionType: 'online', paymentStatus: 'pendente', notes: '' },
+      { id: 102, day: 'monday', startTime: '10:00', endTime: '10:50', client: 'Teste 3', duration: 50, status: 'confirmado', sessionType: 'presencial', paymentStatus: 'pago', notes: '' },
+      { id: 103, day: 'monday', startTime: '11:00', endTime: '11:50', client: 'Teste 4', duration: 50, status: 'confirmado', sessionType: 'online', paymentStatus: 'pendente', notes: '' },
+    ];
+    const allSessions = [...sessions, ...extraSessions];
+    function getSessionsForDate(day: number) {
+      if (!day) return [];
+      // Procurar pelo campo date em weekDaysData (mock)
+      const dateStr = day.toString().padStart(2, '0') + '/' + (month + 1).toString().padStart(2, '0');
+      const dayKey = weekDaysData.find(d => d.date.startsWith(dayStr(day)))?.key;
+      if (!dayKey) return [];
+      return allSessions.filter(session => session.day === dayKey);
+    }
+    // Popover de eventos
+    const [popoverDay, setPopoverDay] = React.useState<number | null>(null);
+    const closePopover = () => setPopoverDay(null);
+    const popoverRef = React.useRef<HTMLDivElement>(null);
+
+    React.useEffect(() => {
+      if (popoverDay !== null) {
+        const handleClickOutside = (e: MouseEvent) => {
+          if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+            setPopoverDay(null);
+          }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+      }
+    }, [popoverDay]);
+    return (
+      <div className="bg-white rounded-xl shadow-sm overflow-visible p-4" style={{ border: '1px solid #DEE2E6' }}>
+        <div className="grid grid-cols-7 gap-2">
+          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((w, i) => (
+            <div key={i} className="text-xs font-bold text-center" style={{ color: '#347474' }}>{w}</div>
+          ))}
+          {daysArray.map((day, idx) => {
+            const events = getSessionsForDate(day || 0);
+            const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
+            return (
+              <div key={idx} className={`min-h-[120px] border rounded-lg p-1 bg-gray-50 relative group`} style={{ borderColor: '#DEE2E6', backgroundColor: isToday ? '#e0f7fa' : undefined }}>
+                {day && (
+                  <>
+                    <div className="flex items-center justify-between mb-1">
+                      <button
+                        className="text-xs font-semibold focus:outline-none"
+                        style={{ color: isToday ? '#fff' : '#343A40', background: isToday ? '#347474' : 'none', borderRadius: '9999px', padding: isToday ? '2px 8px' : undefined }}
+                        onClick={() => setPopoverDay(day)}
+                      >
+                        {day}
+                      </button>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      {events.slice(0, 3).map((session, i) => (
+                        <div key={i} className="truncate px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer" style={{
+                          background: session.paymentStatus === 'pago' ? '#34747422' : session.paymentStatus === 'pendente' ? '#F4A26122' : '#6C757D22',
+                          color: session.paymentStatus === 'pago' ? '#347474' : session.paymentStatus === 'pendente' ? '#F4A261' : '#6C757D',
+                          border: `1px solid ${session.paymentStatus === 'pago' ? '#34747444' : session.paymentStatus === 'pendente' ? '#F4A26144' : '#6C757D44'}`
+                        }}
+                          title={session.client}
+                          onClick={() => setPopoverDay(day)}
+                        >
+                          {session.startTime} {session.client.length > 10 ? session.client.slice(0, 10) + '…' : session.client}
+                        </div>
+                      ))}
+                      {events.length > 3 && (
+                        <button className="text-xs text-[#347474] underline mt-1" onClick={() => setPopoverDay(day)}>
+                          +{events.length - 3} mais…
+                        </button>
+                      )}
+                    </div>
+                    {/* Popover de eventos */}
+                    {popoverDay === day && (
+                      <div
+                        ref={popoverRef}
+                        className="absolute z-50 left-1/2 top-10 -translate-x-1/2 bg-white border rounded-lg shadow-xl p-3 min-w-[180px]"
+                        style={{ borderColor: '#DEE2E6' }}
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-bold text-sm" style={{ color: '#347474' }}>Eventos do dia {day}</span>
+                          <button className="text-xs text-[#347474]" onClick={closePopover}>Fechar</button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          {events.map((session, i) => (
+                            <div key={i} className="flex flex-col px-2 py-1 rounded border" style={{ borderColor: '#DEE2E6', background: '#f8fafc' }}>
+                              <span className="font-medium text-xs" style={{ color: '#343A40' }}>{session.startTime} - {session.endTime}</span>
+                              <span className="text-xs" style={{ color: '#347474' }}>{session.client}</span>
+                              <span className="text-xs" style={{ color: '#6C757D' }}>{session.sessionType === 'online' ? 'Online' : 'Presencial'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold" style={{ color: '#343A40' }}>Agenda</h1>
-        
-        <div className="flex items-center space-x-4">
-          <div className="flex rounded-lg p-1" style={{ backgroundColor: '#F8F9FA' }}>
-            <button
-              onClick={() => setViewMode('weekly')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'weekly' 
-                  ? 'bg-white shadow-sm' 
-                  : 'hover:bg-gray-200'
-              }`}
-              style={{ 
-                color: viewMode === 'weekly' ? '#343A40' : '#6C757D'
-              }}
-            >
-              Semanal
-            </button>
-            <button
-              onClick={() => setViewMode('monthly')}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'monthly' 
-                  ? 'bg-white shadow-sm' 
-                  : 'hover:bg-gray-200'
-              }`}
-              style={{ 
-                color: viewMode === 'monthly' ? '#343A40' : '#6C757D'
-              }}
-            >
-              Mensal
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Week Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setCurrentWeek(currentWeek - 1)}
-            className="p-2 rounded-lg transition-colors hover:bg-gray-100"
-            style={{ color: '#6C757D' }}
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>
-            {getWeekRangeText()} Janeiro 2024
-          </h2>
-          <button
-            onClick={() => setCurrentWeek(currentWeek + 1)}
-            className="p-2 rounded-lg transition-colors hover:bg-gray-100"
-            style={{ color: '#6C757D' }}
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
-        
         <div className="flex items-center space-x-3">
-          {/* View Options Button */}
+          {/* Botão Exibir */}
           <div className="relative" data-view-options>
             <button
               onClick={() => setShowViewOptions(!showViewOptions)}
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors"
-              style={{ 
-                border: '1px solid #DEE2E6',
-                backgroundColor: '#FFFFFF',
-                color: '#343A40'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F8F9FA';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#FFFFFF';
-              }}
+              className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors border text-sm font-medium shadow-sm"
+              style={{ backgroundColor: '#fff', color: '#343A40', border: '1px solid #DEE2E6', height: '44px', minWidth: '120px' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8F9FA'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; }}
             >
               <Settings size={16} style={{ color: '#6C757D' }} />
-              <span className="text-sm font-medium">Exibir</span>
+              <span>Exibir</span>
               <ChevronDown size={14} style={{ color: '#6C757D' }} />
             </button>
-
             {/* View Options Dropdown */}
             {showViewOptions && (
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-20" style={{ border: '1px solid #DEE2E6' }}>
@@ -815,73 +1035,138 @@ const Calendar: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Novo Botão Unificado */}
+          {/* Botão Novo */}
           <div className="relative" ref={createMenuRef}>
-            <button
-              onClick={() => setShowCreateMenu(!showCreateMenu)}
-              className="flex items-center px-4 py-2 rounded-lg text-white transition-colors"
-              style={{ backgroundColor: '#347474' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#2d6363';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#347474';
-              }}
-            >
-              <Plus size={20} className="inline mr-2" />
-              Novo
-              <ChevronDown size={16} className="ml-2" />
-            </button>
-
-            {/* Menu Dropdown */}
-            {showCreateMenu && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50" style={{ border: '1px solid #DEE2E6' }}>
-                <div className="py-2">
-                  <button
-                    onClick={() => {
-                      console.log('Agendar Sessão');
-                      setShowCreateMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
-                    style={{ color: '#343A40' }}
-                  >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(52, 116, 116, 0.1)' }}>
-                      <Clock size={16} style={{ color: '#347474' }} />
-                    </div>
-                    <div>
-                      <div className="font-medium">Agendar Sessão</div>
-                      <div className="text-xs" style={{ color: '#6C757D' }}>Criar agendamento com cliente</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedTimeSlot({ day: 'monday', time: '09:00' });
-                      setBlockForm({
-                        title: '',
-                        startTime: '09:00',
-                        endTime: '10:00',
-                        color: '#8390FA',
-                        emoji: ''
-                      });
-                      setShowBlockModal(true);
-                      setShowCreateMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
-                    style={{ color: '#343A40' }}
-                  >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(131, 144, 250, 0.1)' }}>
-                      <X size={16} style={{ color: '#8390FA' }} />
-                    </div>
-                    <div>
-                      <div className="font-medium">Bloquear Horário</div>
-                      <div className="text-xs" style={{ color: '#6C757D' }}>Criar bloqueio personalizado</div>
-                    </div>
-                  </button>
+            <div>
+              <button
+                onClick={() => setShowCreateMenu(!showCreateMenu)}
+                className="flex items-center px-4 py-2 rounded-lg text-white transition-colors"
+                style={{ backgroundColor: '#347474', height: '44px', minWidth: '120px' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2d6363';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#347474';
+                }}
+              >
+                <Plus size={20} className="inline mr-2" />
+                Novo
+                <ChevronDown size={16} className="ml-2" />
+              </button>
+              {/* Menu Dropdown */}
+              {showCreateMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50" style={{ border: '1px solid #DEE2E6' }}>
+                  <div className="py-2">
+                    <button
+                      onClick={() => {
+                        console.log('Agendar Sessão');
+                        setShowCreateMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
+                      style={{ color: '#343A40' }}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(52, 116, 116, 0.1)' }}>
+                        <Clock size={16} style={{ color: '#347474' }} />
+                      </div>
+                      <div>
+                        <div className="font-medium">Agendar Sessão</div>
+                        <div className="text-xs" style={{ color: '#6C757D' }}>Criar agendamento com cliente</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedTimeSlot({ day: 'monday', time: '09:00' });
+                        setBlockForm({
+                          title: '',
+                          startTime: '09:00',
+                          endTime: '10:00',
+                          color: '#8390FA',
+                          emoji: ''
+                        });
+                        setShowBlockModal(true);
+                        setShowCreateMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
+                      style={{ color: '#343A40' }}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(131, 144, 250, 0.1)' }}>
+                        <X size={16} style={{ color: '#8390FA' }} />
+                      </div>
+                      <div>
+                        <div className="font-medium">Bloquear Horário</div>
+                        <div className="text-xs" style={{ color: '#6C757D' }}>Criar bloqueio personalizado</div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Week Navigation */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => setCurrentWeek(currentWeek - 1)}
+            className="p-2 rounded-lg transition-colors hover:bg-gray-100"
+            style={{ color: '#6C757D' }}
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>
+            {getHeaderText()}
+          </h2>
+          <button
+            onClick={() => setCurrentWeek(currentWeek + 1)}
+            className="p-2 rounded-lg transition-colors hover:bg-gray-100"
+            style={{ color: '#6C757D' }}
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
+        <div className="flex rounded-lg p-1" style={{ backgroundColor: '#F8F9FA' }}>
+          <button
+            onClick={() => setViewMode('daily')}
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'daily' 
+                ? 'bg-white shadow-sm' 
+                : 'hover:bg-gray-200'
+            }`}
+            style={{ 
+              color: viewMode === 'daily' ? '#343A40' : '#6C757D'
+            }}
+          >
+            Diário
+          </button>
+          <button
+            onClick={() => setViewMode('weekly')}
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'weekly' 
+                ? 'bg-white shadow-sm' 
+                : 'hover:bg-gray-200'
+            }`}
+            style={{ 
+              color: viewMode === 'weekly' ? '#343A40' : '#6C757D'
+            }}
+          >
+            Semanal
+          </button>
+          <button
+            onClick={() => setViewMode('monthly')}
+            className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'monthly' 
+                ? 'bg-white shadow-sm' 
+                : 'hover:bg-gray-200'
+            }`}
+            style={{ 
+              color: viewMode === 'monthly' ? '#343A40' : '#6C757D'
+            }}
+          >
+            Mensal
+          </button>
         </div>
       </div>
 
@@ -891,318 +1176,326 @@ const Calendar: React.FC = () => {
         className="bg-white rounded-xl shadow-sm overflow-visible" 
         style={{ border: '1px solid #DEE2E6' }}
       >
-        {/* Header with days */}
-        <div className="grid" style={{ 
-          gridTemplateColumns: `120px repeat(${weekDays}, 1fr)`,
-          borderBottom: '1px solid #DEE2E6' 
-        }}>
-          <div className="p-4" style={{ backgroundColor: '#F8F9FA', borderRight: '1px solid #DEE2E6' }}>
-            <span className="text-sm font-medium" style={{ color: '#6C757D' }}>Horário</span>
-          </div>
-          {getDisplayedDays(weekDays).map((day, index) => (
-            <div
-              key={day.key}
-              className={`p-4 text-center relative ${
-                isToday(day.key) ? 'relative' : ''
-              }`}
-              style={{
-                backgroundColor: isToday(day.key) ? 'rgba(52, 116, 116, 0.05)' : '#F8F9FA',
-                borderRight: index < weekDays - 1 ? '1px solid #DEE2E6' : 'none',
-                color: isToday(day.key) ? '#347474' : '#343A40'
-              }}
-            >
-              {isToday(day.key) && (
-                <div 
-                  className="absolute top-0 left-0 right-0 h-1"
-                  style={{ backgroundColor: '#347474' }}
-                ></div>
-              )}
-              <div className="font-semibold">{day.label}</div>
-              <div className="text-sm" style={{ color: isToday(day.key) ? '#347474' : '#6C757D' }}>{day.date}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Time slots with absolute positioned sessions */}
-        <div className="relative" style={{ height: '960px' }}>
-          {/* Time labels */}
-          <div className="absolute left-0 top-0 bottom-0" style={{ width: '120px', zIndex: 10 }}>
-            {timeSlots.map((time, index) => (
-              <div 
-                key={time}
-                className="absolute text-sm font-medium text-center"
-                style={{ 
-                  top: `${(index / timeSlots.length) * 100}%`,
-                  height: `${100 / timeSlots.length}%`,
-                  backgroundColor: '#F8F9FA',
-                  borderRight: '1px solid #DEE2E6',
-                  borderBottom: index < timeSlots.length - 1 ? '1px solid #DEE2E6' : 'none',
-                  color: isWorkingHour(time) ? '#6C757D' : '#ADB5BD',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '120px'
-                }}
-              >
-                {time}
+        {viewMode === 'daily' && <DailyView />}
+        {viewMode === 'weekly' && (
+          <>
+            {/* Header with days */}
+            <div className="grid" style={{ 
+              gridTemplateColumns: `120px repeat(${weekDays}, 1fr)`,
+              borderBottom: '1px solid #DEE2E6' 
+            }}>
+              <div className="p-4" style={{ backgroundColor: '#F8F9FA', borderRight: '1px solid #DEE2E6' }}>
+                <span className="text-sm font-medium" style={{ color: '#6C757D' }}>Horário</span>
               </div>
-            ))}
-          </div>
-
-          {/* Day columns */}
-          <div className="absolute top-0 bottom-0 right-0" style={{ left: '120px' }}>
-            <div className="grid h-full" style={{ gridTemplateColumns: `repeat(${weekDays}, 1fr)` }}>
-              {getDisplayedDays(weekDays).map((day, dayIndex) => (
-                <div 
+              {getDisplayedDays(weekDays).map((day, index) => (
+                <div
                   key={day.key}
-                  className="relative"
-                  style={{ 
-                    borderRight: dayIndex < weekDays - 1 ? '1px solid #DEE2E6' : 'none',
-                    backgroundColor: isToday(day.key) ? 'rgba(52, 116, 116, 0.02)' : 'transparent'
+                  className={`p-4 text-center relative ${
+                    isToday(day.key) ? 'relative' : ''
+                  }`}
+                  style={{
+                    backgroundColor: isToday(day.key) ? 'rgba(52, 116, 116, 0.05)' : '#F8F9FA',
+                    borderRight: index < weekDays - 1 ? '1px solid #DEE2E6' : 'none',
+                    color: isToday(day.key) ? '#347474' : '#343A40'
                   }}
                 >
-                  {/* Hour lines */}
-                  {timeSlots.map((time, index) => (
-                    <div
-                      key={`${day.key}-${time}`}
-                      className="absolute w-full cursor-pointer hover:bg-gray-50 transition-colors"
-                      style={{
-                        top: `${(index / timeSlots.length) * 100}%`,
-                        height: `${100 / timeSlots.length}%`,
-                        borderBottom: index < timeSlots.length - 1 ? '1px solid #DEE2E6' : 'none',
-                        backgroundColor: !isWorkingHour(time) ? '#FAFBFC' : 'transparent'
-                      }}
-                      onClick={() => handleTimeSlotClick(day.key, time)}
-                    />
-                  ))}
-
-                  {/* Sessions */}
-                  {getSessionsForDay(day.key).map((session) => {
-                    const position = getSessionPosition(session);
-                    const isDragging = dragState.isDragging && dragState.itemId === session.id && dragState.itemType === 'session';
-                    const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
-                    const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
-                    const isMenuOpen = actionMenuSessionId === session.id;
-
-                    const handleCardMouseDown = (e: React.MouseEvent) => {
-                      const btn = menuButtonRefs.current[session.id];
-                      const menu = menuDropdownRefs.current[session.id];
-                      if (
-                        btn?.contains(e.target as Node) ||
-                        menu?.contains(e.target as Node)
-                      ) {
-                        return;
-                      }
-                      handleMouseDown(e, session, 'session');
-                    };
-
-                    return (
-                      <div
-                        key={session.id}
-                        className={`absolute w-full px-1 ${isDragging ? 'opacity-50' : ''}`}
-                        style={{
-                          top: position.top,
-                          height: position.height,
-                          zIndex: isDragging ? 50 : isMenuOpen ? 30 : 20
-                        }}
-                      >
-                        <div
-                          className="h-full p-2 rounded-lg cursor-move transition-all duration-200 border-l-4 shadow-sm group hover:shadow-md hover:-translate-y-0.5"
-                          style={{
-                            backgroundColor: session.paymentStatus === 'pago' ? 'rgba(52, 116, 116, 0.13)' : 'rgba(244, 162, 97, 0.13)',
-                            borderLeftColor: session.paymentStatus === 'pago' ? '#347474' : '#F4A261',
-                            cursor: isDragging ? 'grabbing' : 'grab',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            height: '100%'
-                          }}
-                          onMouseDown={handleCardMouseDown}
-                        >
-                          {/* Linha 1: Ícone, Tempo e Duração */}
-                          <div className="flex items-center justify-between mb-0.5 w-full">
-                            <SessionIcon size={16} style={{ color: iconColor }} />
-                            <span className="text-xs font-medium text-center flex-1 mx-1" style={{ color: '#343A40' }}>
-                              {session.startTime} - {session.endTime}
-                            </span>
-                            <span className="text-xs" style={{ color: '#6C757D' }}>
-                              ({session.duration}min)
-                            </span>
-                          </div>
-
-                          {/* Linha 2: Cliente e Menu */}
-                          <div className="flex items-center justify-between">
-                            <div className="font-medium text-sm truncate flex-1" style={{ color: '#343A40' }}>
-                              {session.client}
-                            </div>
-                            <div className="relative">
-                              <button
-                                ref={el => (menuButtonRefs.current[session.id] = el)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-full hover:bg-white/50 ml-1"
-                                style={{ color: '#6C757D' }}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setActionMenuSessionId(session.id === actionMenuSessionId ? null : session.id);
-                                }}
-                              >
-                                <MoreHorizontal size={16} />
-                              </button>
-                              
-                              {/* Menu de ações */}
-                              {isMenuOpen && (
-                                <div
-                                  ref={el => (menuDropdownRefs.current[session.id] = el)}
-                                  className="absolute right-0 bottom-8 bg-white rounded-lg shadow-xl border z-50 min-w-[200px]"
-                                  style={{ border: '1px solid #DEE2E6' }}
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
-                                    style={{ color: '#343A40' }}
-                                    onClick={() => {
-                                      console.log('Ver Prontuário');
-                                      setActionMenuSessionId(null);
-                                    }}
-                                  >
-                                    <BookOpen size={16} className="mr-2" /> Ver Prontuário
-                                  </button>
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
-                                    style={{ color: '#343A40' }}
-                                    onClick={() => {
-                                      console.log('Editar Horário');
-                                      setActionMenuSessionId(null);
-                                    }}
-                                  >
-                                    <Clock size={16} className="mr-2" /> Editar Horário
-                                  </button>
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
-                                    style={{ color: '#347474' }}
-                                    onClick={() => {
-                                      console.log('Registrar Pagamento');
-                                      setActionMenuSessionId(null);
-                                    }}
-                                  >
-                                    <DollarSign size={16} className="mr-2" /> Registrar Pagamento
-                                  </button>
-                                  <div className="border-t my-1 border-gray-200" />
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
-                                    style={{ color: '#E76F51' }}
-                                    onClick={() => {
-                                      console.log('Cancelar Sessão');
-                                      setActionMenuSessionId(null);
-                                    }}
-                                  >
-                                    <Trash2 size={16} className="mr-2" /> Cancelar Sessão
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Time blocks - Now draggable */}
-                  {viewOptions.showTimeBlocks && getBlocksForDay(day.key).map((block) => {
-                    const position = getBlockPosition(block);
-                    const isDragging = dragState.isDragging && dragState.itemId === block.id && dragState.itemType === 'block';
-                    const isMenuOpen = actionMenuBlockId === block.id;
-
-                    const handleBlockMouseDown = (e: React.MouseEvent) => {
-                      const btn = blockMenuButtonRefs.current[block.id];
-                      const menu = blockMenuDropdownRefs.current[block.id];
-                      if (
-                        btn?.contains(e.target as Node) ||
-                        menu?.contains(e.target as Node)
-                      ) {
-                        return;
-                      }
-                      handleMouseDown(e, block, 'block');
-                    };
-                    
-                    return (
-                      <div
-                        key={block.id}
-                        className={`absolute w-full px-1 ${isDragging ? 'opacity-50' : ''}`}
-                        style={{
-                          top: position.top,
-                          height: position.height,
-                          zIndex: isDragging ? 50 : isMenuOpen ? 30 : 10
-                        }}
-                      >
-                        <div
-                          className="h-full p-2 rounded-lg border-l-4 cursor-move transition-all duration-200 shadow-sm group hover:shadow-md hover:-translate-y-0.5"
-                          style={{
-                            backgroundColor: `${block.color}20`,
-                            borderLeftColor: block.color,
-                            cursor: isDragging ? 'grabbing' : 'grab'
-                          }}
-                          onMouseDown={handleBlockMouseDown}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center space-x-1">
-                              {block.emoji && <span className="text-xs">{block.emoji}</span>}
-                              <span className="text-xs" style={{ color: '#6C757D' }}>{block.duration}</span>
-                            </div>
-                            <div className="relative">
-                              <button
-                                ref={el => (blockMenuButtonRefs.current[block.id] = el)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-full hover:bg-white/50"
-                                style={{ color: '#6C757D' }}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  setActionMenuBlockId(block.id === actionMenuBlockId ? null : block.id);
-                                }}
-                              >
-                                <MoreHorizontal size={12} />
-                              </button>
-                              
-                              {/* Menu de ações para bloqueios */}
-                              {isMenuOpen && (
-                                <div
-                                  ref={el => (blockMenuDropdownRefs.current[block.id] = el)}
-                                  className="absolute right-0 bottom-6 bg-white rounded-lg shadow-xl border z-50 min-w-[160px]"
-                                  style={{ border: '1px solid #DEE2E6' }}
-                                  onClick={e => e.stopPropagation()}
-                                >
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
-                                    style={{ color: '#343A40' }}
-                                    onClick={() => {
-                                      console.log('Editar Bloqueio');
-                                      setActionMenuBlockId(null);
-                                    }}
-                                  >
-                                    <Clock size={14} className="mr-2" /> Editar
-                                  </button>
-                                  <div className="border-t my-1 border-gray-200" />
-                                  <button
-                                    className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
-                                    style={{ color: '#E76F51' }}
-                                    onClick={() => {
-                                      handleDeleteBlock(block.id);
-                                    }}
-                                  >
-                                    <Trash2 size={14} className="mr-2" /> Excluir
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          <div className="font-medium text-sm" style={{ color: '#343A40' }}>{block.title}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {isToday(day.key) && (
+                    <div 
+                      className="absolute top-0 left-0 right-0 h-1"
+                      style={{ backgroundColor: '#347474' }}
+                    ></div>
+                  )}
+                  <div className="font-semibold">{day.label}</div>
+                  <div className="text-sm" style={{ color: isToday(day.key) ? '#347474' : '#6C757D' }}>{day.date}</div>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
+
+            {/* Time slots with absolute positioned sessions */}
+            <div className="relative" style={{ height: '960px' }}>
+              {/* Time labels */}
+              <div className="absolute left-0 top-0 bottom-0" style={{ width: '120px', zIndex: 10 }}>
+                {timeSlots.map((time, index) => (
+                  <div 
+                    key={time}
+                    className="absolute text-sm font-medium text-center"
+                    style={{ 
+                      top: `${(index / timeSlots.length) * 100}%`,
+                      height: `${100 / timeSlots.length}%`,
+                      backgroundColor: '#F8F9FA',
+                      borderRight: '1px solid #DEE2E6',
+                      borderBottom: index < timeSlots.length - 1 ? '1px solid #DEE2E6' : 'none',
+                      color: isWorkingHour(time) ? '#6C757D' : '#ADB5BD',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '120px'
+                    }}
+                  >
+                    {time}
+                  </div>
+                ))}
+              </div>
+
+              {/* Day columns */}
+              <div className="absolute top-0 bottom-0 right-0" style={{ left: '120px' }}>
+                <div className="grid h-full" style={{ gridTemplateColumns: `repeat(${weekDays}, 1fr)` }}>
+                  {getDisplayedDays(weekDays).map((day, dayIndex) => (
+                    <div 
+                      key={day.key}
+                      className="relative"
+                      style={{ 
+                        borderRight: dayIndex < weekDays - 1 ? '1px solid #DEE2E6' : 'none',
+                        backgroundColor: isToday(day.key) ? 'rgba(52, 116, 116, 0.02)' : 'transparent'
+                      }}
+                    >
+                      {/* Hour lines */}
+                      {timeSlots.map((time, index) => (
+                        <div
+                          key={`${day.key}-${time}`}
+                          className="absolute w-full cursor-pointer hover:bg-gray-50 transition-colors"
+                          style={{
+                            top: `${(index / timeSlots.length) * 100}%`,
+                            height: `${100 / timeSlots.length}%`,
+                            borderBottom: index < timeSlots.length - 1 ? '1px solid #DEE2E6' : 'none',
+                            backgroundColor: !isWorkingHour(time) ? '#FAFBFC' : 'transparent'
+                          }}
+                          onClick={() => handleTimeSlotClick(day.key, time)}
+                        />
+                      ))}
+
+                      {/* Sessions */}
+                      {getSessionsForDay(day.key).map((session) => {
+                        const position = getSessionPosition(session);
+                        const isDragging = dragState.isDragging && dragState.itemId === session.id && dragState.itemType === 'session';
+                        const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
+                        const iconColor = session.paymentStatus === 'pago' ? '#347474' : '#F4A261';
+                        const isMenuOpen = actionMenuSessionId === session.id;
+
+                        const handleCardMouseDown = (e: React.MouseEvent) => {
+                          const btn = menuButtonRefs.current[session.id];
+                          const menu = menuDropdownRefs.current[session.id];
+                          if (
+                            btn?.contains(e.target as Node) ||
+                            menu?.contains(e.target as Node)
+                          ) {
+                            return;
+                          }
+                          handleMouseDown(e, session, 'session');
+                        };
+
+                        return (
+                          <div
+                            key={session.id}
+                            className={`absolute w-full px-1 ${isDragging ? 'opacity-50' : ''}`}
+                            style={{
+                              top: position.top,
+                              height: position.height,
+                              zIndex: isDragging ? 50 : isMenuOpen ? 30 : 20
+                            }}
+                          >
+                            <div
+                              className="h-full p-2 rounded-lg cursor-move transition-all duration-200 border-l-4 shadow-sm group hover:shadow-md hover:-translate-y-0.5"
+                              style={{
+                                backgroundColor: session.paymentStatus === 'pago' ? 'rgba(52, 116, 116, 0.13)' : 'rgba(244, 162, 97, 0.13)',
+                                borderLeftColor: session.paymentStatus === 'pago' ? '#347474' : '#F4A261',
+                                cursor: isDragging ? 'grabbing' : 'grab',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                height: '100%'
+                              }}
+                              onMouseDown={handleCardMouseDown}
+                            >
+                              {/* Linha 1: Ícone, Tempo e Duração */}
+                              <div className="flex items-center justify-between mb-0.5 w-full">
+                                <SessionIcon size={16} style={{ color: iconColor }} />
+                                <span className="text-xs font-medium text-center flex-1 mx-1" style={{ color: '#343A40' }}>
+                                  {session.startTime} - {session.endTime}
+                                </span>
+                                {!(viewMode === 'weekly' && weekDays === 7) && (
+                                  <span className="text-xs" style={{ color: '#6C757D' }}>
+                                    ({session.duration}min)
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Linha 2: Cliente e Menu */}
+                              <div className="flex items-center justify-between">
+                                <div className="font-medium text-sm truncate flex-1" style={{ color: '#343A40' }}>
+                                  {session.client}
+                                </div>
+                                <div className="relative">
+                                  <button
+                                    ref={el => (menuButtonRefs.current[session.id] = el)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-full hover:bg-white/50 ml-1"
+                                    style={{ color: '#6C757D' }}
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      setActionMenuSessionId(session.id === actionMenuSessionId ? null : session.id);
+                                    }}
+                                  >
+                                    <MoreHorizontal size={16} />
+                                  </button>
+                                  
+                                  {/* Menu de ações */}
+                                  {isMenuOpen && (
+                                    <div
+                                      ref={el => (menuDropdownRefs.current[session.id] = el)}
+                                      className="absolute right-0 bottom-8 bg-white rounded-lg shadow-xl border z-50 min-w-[200px]"
+                                      style={{ border: '1px solid #DEE2E6' }}
+                                      onClick={e => e.stopPropagation()}
+                                    >
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
+                                        style={{ color: '#343A40' }}
+                                        onClick={() => {
+                                          console.log('Ver Prontuário');
+                                          setActionMenuSessionId(null);
+                                        }}
+                                      >
+                                        <BookOpen size={16} className="mr-2" /> Ver Prontuário
+                                      </button>
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                        style={{ color: '#343A40' }}
+                                        onClick={() => {
+                                          console.log('Editar Horário');
+                                          setActionMenuSessionId(null);
+                                        }}
+                                      >
+                                        <Clock size={16} className="mr-2" /> Editar Horário
+                                      </button>
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                        style={{ color: '#347474' }}
+                                        onClick={() => {
+                                          console.log('Registrar Pagamento');
+                                          setActionMenuSessionId(null);
+                                        }}
+                                      >
+                                        <DollarSign size={16} className="mr-2" /> Registrar Pagamento
+                                      </button>
+                                      <div className="border-t my-1 border-gray-200" />
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
+                                        style={{ color: '#E76F51' }}
+                                        onClick={() => {
+                                          console.log('Cancelar Sessão');
+                                          setActionMenuSessionId(null);
+                                        }}
+                                      >
+                                        <Trash2 size={16} className="mr-2" /> Cancelar Sessão
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Time blocks - Now draggable */}
+                      {viewOptions.showTimeBlocks && getBlocksForDay(day.key).map((block) => {
+                        const position = getBlockPosition(block);
+                        const isDragging = dragState.isDragging && dragState.itemId === block.id && dragState.itemType === 'block';
+                        const isMenuOpen = actionMenuBlockId === block.id;
+
+                        const handleBlockMouseDown = (e: React.MouseEvent) => {
+                          const btn = blockMenuButtonRefs.current[block.id];
+                          const menu = blockMenuDropdownRefs.current[block.id];
+                          if (
+                            btn?.contains(e.target as Node) ||
+                            menu?.contains(e.target as Node)
+                          ) {
+                            return;
+                          }
+                          handleMouseDown(e, block, 'block');
+                        };
+                        
+                        return (
+                          <div
+                            key={block.id}
+                            className={`absolute w-full px-1 ${isDragging ? 'opacity-50' : ''}`}
+                            style={{
+                              top: position.top,
+                              height: position.height,
+                              zIndex: isDragging ? 50 : isMenuOpen ? 30 : 10
+                            }}
+                          >
+                            <div
+                              className="h-full p-2 rounded-lg border-l-4 cursor-move transition-all duration-200 shadow-sm group hover:shadow-md hover:-translate-y-0.5"
+                              style={{
+                                backgroundColor: `${block.color}20`,
+                                borderLeftColor: block.color,
+                                cursor: isDragging ? 'grabbing' : 'grab'
+                              }}
+                              onMouseDown={handleBlockMouseDown}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center space-x-1">
+                                  {block.emoji && <span className="text-xs">{block.emoji}</span>}
+                                  <span className="text-xs" style={{ color: '#6C757D' }}>{block.duration}</span>
+                                </div>
+                                <div className="relative">
+                                  <button
+                                    ref={el => (blockMenuButtonRefs.current[block.id] = el)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 p-1 rounded-full hover:bg-white/50"
+                                    style={{ color: '#6C757D' }}
+                                    onClick={e => {
+                                      e.stopPropagation();
+                                      setActionMenuBlockId(block.id === actionMenuBlockId ? null : block.id);
+                                    }}
+                                  >
+                                    <MoreHorizontal size={12} />
+                                  </button>
+                                  
+                                  {/* Menu de ações para bloqueios */}
+                                  {isMenuOpen && (
+                                    <div
+                                      ref={el => (blockMenuDropdownRefs.current[block.id] = el)}
+                                      className="absolute right-0 bottom-6 bg-white rounded-lg shadow-xl border z-50 min-w-[160px]"
+                                      style={{ border: '1px solid #DEE2E6' }}
+                                      onClick={e => e.stopPropagation()}
+                                    >
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50 rounded-t-lg"
+                                        style={{ color: '#343A40' }}
+                                        onClick={() => {
+                                          console.log('Editar Bloqueio');
+                                          setActionMenuBlockId(null);
+                                        }}
+                                      >
+                                        <Clock size={14} className="mr-2" /> Editar
+                                      </button>
+                                      <div className="border-t my-1 border-gray-200" />
+                                      <button
+                                        className="flex items-center w-full px-3 py-2 text-sm hover:bg-red-50 rounded-b-lg"
+                                        style={{ color: '#E76F51' }}
+                                        onClick={() => {
+                                          handleDeleteBlock(block.id);
+                                        }}
+                                      >
+                                        <Trash2 size={14} className="mr-2" /> Excluir
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="font-medium text-sm" style={{ color: '#343A40' }}>{block.title}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+        {viewMode === 'monthly' && <MonthlyView />}
       </div>
 
       {/* Drag Preview */}
