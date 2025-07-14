@@ -1027,7 +1027,7 @@ const Calendar: React.FC = () => {
             </button>
             {/* View Options Dropdown */}
             {showViewOptions && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-20" style={{ border: '1px solid #DEE2E6' }}>
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-50" style={{ border: '1px solid #DEE2E6' }}>
                 <div className="p-4">
                   {/* Period Section */}
                   <div className="mb-4">
