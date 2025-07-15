@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Clock, User, ChevronRight, TrendingUp, Users, CreditCard, Calendar, Plus, FileText, MoreHorizontal, Edit, Archive, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, User, ChevronRight, TrendingUp, Users, CreditCard, Calendar, Plus, FileText, MoreHorizontal, Edit, Archive, Trash2, DollarSign } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import AddSessionModal from './AddSessionModal';
+import AddClientModal from './AddClientModal';
 
 interface DashboardProps {
   onNavigateToClient: () => void;
@@ -17,6 +18,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
   const [modalClientName, setModalClientName] = useState<string | undefined>(undefined);
   const [modalMode, setModalMode] = useState<'register' | 'schedule'>('register');
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false); // para o botão de adicionar cliente
 
   const recentClients = [
     {
@@ -108,6 +111,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
     setIsAddSessionModalOpen(true);
   };
 
+  // Fechar menu ao clicar fora
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.group')) {
+        setShowCreateMenu(false);
+      }
+    };
+    if (showCreateMenu) {
+      document.addEventListener('mousedown', handleClick);
+      return () => document.removeEventListener('mousedown', handleClick);
+    }
+  }, [showCreateMenu]);
+
   return (
   <div>
     <div className="p-8">
@@ -122,41 +138,57 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
           </p>
         </div>
         <div className="relative group">
+          {/* O botão principal só abre/fecha o menu, não executa ação */}
           <button
-  className="inline-flex items-center font-medium px-4 py-2 rounded-lg transition-colors bg-[#347474] hover:bg-[#285d5d] text-white"
-            onClick={() => openAddSessionModal(undefined, 'schedule')}
->
+            type="button"
+            className="inline-flex items-center font-medium px-4 py-2 rounded-lg transition-colors bg-[#347474] hover:bg-[#285d5d] text-white"
+            onClick={() => setShowCreateMenu((v) => !v)}
+            aria-haspopup="true"
+            aria-expanded={showCreateMenu}
+          >
             <Plus className="w-4 h-4 mr-2" />
             <span>Novo</span>
             <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-
           {/* Dropdown Menu */}
-          <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-            <div className="py-2">
-              <button
-                className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors"
-                onClick={() => openAddSessionModal(undefined, 'schedule')}
-              >
-                <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-4 h-4 text-[#347474]" />
-                </div>
-                <div>
-                  <p className="font-medium text-[#1F2937]">Agendar Sessão</p>
-                </div>
-              </button>
-              <button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors">
-                <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
-                  <Users className="w-4 h-4 text-[#347474]" />
-                </div>
-                <div>
-                  <p className="font-medium text-[#1F2937]">Adicionar Cliente</p>
-                </div>
-              </button>
+          {(showCreateMenu || undefined) && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+              <div className="py-2">
+                <button
+                  type="button"
+                  className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors"
+                  onClick={() => {
+                    setShowCreateMenu(false);
+                    openAddSessionModal(undefined, 'schedule');
+                  }}
+                >
+                  <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-[#347474]" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-[#1F2937]">Agendar Sessão</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3 transition-colors"
+                  onClick={() => {
+                    setShowCreateMenu(false);
+                    setIsAddClientModalOpen(true); // simula abrir modal de cliente
+                  }}
+                >
+                  <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
+                    <Users className="w-4 h-4 text-[#347474]" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-[#1F2937]">Adicionar Cliente</p>
+                  </div>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -272,7 +304,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
 
       {/* Recent Clients */}
       <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4" style={{ color: '#343A40' }}>Acessados Recentemente</h2>
+        <h2 className="text-xl font-semibold mb-4" style={{ color: '#343A40' }}>Sessões Anteriores</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {recentClients.map((client) => (
             <div 
@@ -422,22 +454,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
 
                       {/* Tags de Contexto */}
                       <div className="flex items-center space-x-2 mb-3">
-                        {session.isFirstSession && (
-                          <Badge className="bg-[#EF4444] text-white text-xs px-2 py-1">1ª Sessão</Badge>
-                        )}
                         <Badge
-                          className={`text-xs px-2 py-1 ${
-                            session.type === "Online" ? "bg-[#E6F4F1] text-[#347474]" : "bg-green-100 text-green-800"
-                          }`}
+                          className={`text-xs px-2 py-1 transition-colors duration-150 cursor-default
+                            ${session.type === "Online"
+                              ? "bg-[#E6F4F1] text-[#347474] hover:bg-[#d2f0e7] hover:text-[#285d5d]"
+                              : "bg-green-100 text-green-800 hover:bg-green-200 hover:text-green-900"}
+                          `}
                         >
                           {session.type}
                         </Badge>
                         <Badge
-                          className={`text-xs px-2 py-1 ${
-                            session.paymentStatus === "Pago"
-                              ? "bg-[#10B981] text-white"
-                              : "bg-orange-100 text-orange-800"
-                          }`}
+                          className={`text-xs px-2 py-1 transition-colors duration-150 cursor-default
+                            ${session.paymentStatus === "Pago"
+                              ? "bg-[#10B981] text-white hover:bg-[#059669] hover:text-white"
+                              : "bg-orange-100 text-orange-800 hover:bg-orange-200 hover:text-orange-900"}
+                          `}
                         >
                           {session.paymentStatus}
                         </Badge>
@@ -454,9 +485,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                         className="bg-[#347474] hover:bg-[#285d5d] text-white"
                         onClick={() => openAddSessionModal(session.client, 'register')}
                       >
-                        {new Date().getHours() >= Number.parseInt(session.time.split(":")[0])
-                          ? "Registrar Sessão"
-                          : "Iniciar Sessão"}
+                        Registrar Sessão
                       </Button>
 
                       <Button
@@ -478,12 +507,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                         </Button>
 
                         {/* Dropdown Menu (aparece no hover) */}
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                        <div className="absolute right-0 top-full mt-1 w-[220px] bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                           <div className="py-1">
                             {session.paymentStatus === "Pendente" && (
-                              <button className="w-full text-left px-4 py-2 text-sm text-[#1F2937] hover:bg-gray-50 flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-[#10B981] rounded-full"></div>
-                                <span>Marcar como Pago</span>
+                              <button
+                                className="flex items-center w-full px-3 py-2 text-sm hover:bg-gray-50"
+                                style={{ color: '#10B981' }}
+                                onClick={() => {/* ação de registrar pagamento */}}
+                              >
+                                <DollarSign size={16} className="mr-2" /> Registrar Pagamento
                               </button>
                             )}
                             <button
@@ -522,6 +554,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
       clientName={modalClientName}
       mode={modalMode}
     />
+    {isAddClientModalOpen && (
+      <AddClientModal isOpen={isAddClientModalOpen} onClose={() => setIsAddClientModalOpen(false)} />
+    )}
     </div>
   );
 };

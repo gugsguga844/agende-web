@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Clock, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal, Plus, ChevronDown, Palette, Smile, Settings } from 'lucide-react';
+import AddSessionModal from './AddSessionModal';
 
 interface Session {
   id: number;
@@ -63,6 +64,7 @@ const Calendar: React.FC = () => {
     color: '#8390FA',
     emoji: ''
   });
+  const [showAddSessionModal, setShowAddSessionModal] = useState(false);
 
   const menuButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
   const menuDropdownRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -1078,7 +1080,9 @@ const Calendar: React.FC = () => {
           {/* Botão Novo */}
           <div className="relative" ref={createMenuRef}>
             <div>
+              {/* O botão principal só abre/fecha o menu, não executa ação */}
               <button
+                type="button"
                 onClick={() => setShowCreateMenu(!showCreateMenu)}
                 className="flex items-center px-4 py-2 rounded-lg text-white transition-colors"
                 style={{ backgroundColor: '#347474', height: '44px', minWidth: '120px' }}
@@ -1088,6 +1092,8 @@ const Calendar: React.FC = () => {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = '#347474';
                 }}
+                aria-haspopup="true"
+                aria-expanded={showCreateMenu}
               >
                 <Plus size={20} className="inline mr-2" />
                 Novo
@@ -1098,9 +1104,11 @@ const Calendar: React.FC = () => {
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50" style={{ border: '1px solid #DEE2E6' }}>
                   <div className="py-2">
                     <button
+                      type="button"
                       onClick={() => {
-                        console.log('Agendar Sessão');
                         setShowCreateMenu(false);
+                        // Abrir modal de agendamento de sessão
+                        setShowAddSessionModal(true);
                       }}
                       className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
                       style={{ color: '#343A40' }}
@@ -1114,7 +1122,9 @@ const Calendar: React.FC = () => {
                       </div>
                     </button>
                     <button
+                      type="button"
                       onClick={() => {
+                        setShowCreateMenu(false);
                         setSelectedTimeSlot({ day: 'monday', time: '09:00' });
                         setBlockForm({
                           title: '',
@@ -1124,7 +1134,6 @@ const Calendar: React.FC = () => {
                           emoji: ''
                         });
                         setShowBlockModal(true);
-                        setShowCreateMenu(false);
                       }}
                       className="w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors flex items-center space-x-3"
                       style={{ color: '#343A40' }}
@@ -1961,6 +1970,11 @@ const Calendar: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Adicionar estado para modal de sessão */}
+      {showAddSessionModal && (
+        <AddSessionModal isOpen={showAddSessionModal} onClose={() => setShowAddSessionModal(false)} mode="schedule" />
+      )}
     </div>
   );
 };

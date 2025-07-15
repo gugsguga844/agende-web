@@ -27,7 +27,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   clientName,
   mode = 'register'
 }) => {
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClients, setSelectedClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [date, setDate] = useState('');
@@ -44,6 +44,9 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   const [toast, setToast] = useState<ToastMessage>({ type: 'success', message: '', show: false });
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
+  const [meetingLink, setMeetingLink] = useState('');
+  const [sessionPrice, setSessionPrice] = useState('');
+  const [sessionPriceError, setSessionPriceError] = useState('');
 
   // Sample clients data
   const clients: Client[] = [
@@ -84,16 +87,19 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       setNotesExpanded(mode === 'register');
       setErrorMessage('');
       setIsSubmitting(false);
+      setMeetingLink('');
+      setSessionPrice('');
+      setSessionPriceError('');
       
       // Set client if provided
       if (clientName) {
         const client = clients.find(c => c.name === clientName);
         if (client) {
-          setSelectedClient(client);
+          setSelectedClients([client]);
           setClientSearch(client.name);
         }
       } else {
-        setSelectedClient(null);
+        setSelectedClients([]);
         setClientSearch('');
       }
     }
@@ -158,10 +164,19 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
     setToast({ type, message, show: true });
   };
 
+  // Função para formatar valor como moeda
+  function formatCurrency(value: string) {
+    const clean = value.replace(/[^\d]/g, '');
+    const number = parseFloat(clean) / 100;
+    if (isNaN(number)) return '';
+    return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage('');
+    setSessionPriceError('');
     
     try {
       // Get final duration value
@@ -170,6 +185,14 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       // Validate custom duration
       if (isCustomDuration && (!customDuration || finalDuration <= 0 || finalDuration > 480)) {
         setErrorMessage('A duração deve ser entre 1 e 480 minutos.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validação do valor
+      const priceNumber = Number(sessionPrice.replace(/[^\d,\.]/g, '').replace(',', '.'));
+      if (isNaN(priceNumber) || priceNumber <= 0 || priceNumber > 9999.99) {
+        setSessionPriceError('Informe um valor válido entre R$ 0,01 e R$ 9.999,99');
         setIsSubmitting(false);
         return;
       }
@@ -187,14 +210,16 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const sessionData = {
-        client: selectedClient,
+        clients: selectedClients,
         date,
         startTime,
         duration: finalDuration,
         sessionTitle,
         sessionType,
         paymentStatus,
-        notes
+        notes,
+        meetingLink: sessionType === 'online' ? meetingLink : undefined,
+        sessionPrice: priceNumber
       };
       
       console.log('Session data:', sessionData);
@@ -203,7 +228,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       onClose();
       
       const actionText = mode === 'register' ? 'registrada' : 'agendada';
-      showToast('success', `Sessão com ${selectedClient?.name} ${actionText} com sucesso.`);
+      showToast('success', `Sessão com ${selectedClients.map(c => c.name).join(', ')} ${actionText} com sucesso.`);
       
     } catch (error) {
       setErrorMessage('Erro interno do servidor. Tente novamente em alguns instantes.');
@@ -213,9 +238,10 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   };
 
   const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    setClientSearch(client.name);
-    setShowClientDropdown(false);
+    if (!selectedClients.some(c => c.id === client.id)) {
+      setSelectedClients(prev => [...prev, client]);
+    }
+    setClientSearch('');
   };
 
   const getModalTitle = () => {
@@ -276,7 +302,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
               {/* Client Selection */}
               <div data-client-selector>
                 <label htmlFor="client" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                  Cliente
+                  Cliente{selectedClients.length > 1 ? 's (Sessão em Grupo)' : ''}
                 </label>
                 <div className="relative">
                   <div className="relative">
@@ -288,9 +314,6 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                       onChange={(e) => {
                         setClientSearch(e.target.value);
                         setShowClientDropdown(true);
-                        if (!e.target.value) {
-                          setSelectedClient(null);
-                        }
                       }}
                       onFocus={() => setShowClientDropdown(true)}
                       className="w-full pl-10 pr-10 py-3 rounded-lg transition-colors"
@@ -308,9 +331,9 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                           e.target.style.boxShadow = 'none';
                         }, 150);
                       }}
-                      placeholder="Digite o nome do cliente..."
+                      placeholder={selectedClients.length > 0 ? '' : 'Digite o nome do cliente...'}
                       disabled={!!clientName} // Disabled if opened from client profile
-                      required
+                      required={selectedClients.length === 0}
                     />
                     <ChevronDown 
                       size={20} 
@@ -327,13 +350,32 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                       +
                     </button>
                   </div>
-
+                  {/* Chips dos clientes selecionados */}
+                  {selectedClients.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedClients.map(client => (
+                        <span key={client.id} className="flex items-center bg-[#F8F9FA] rounded-full px-3 py-1 text-sm font-medium" style={{ color: '#343A40', border: '1px solid #DEE2E6' }}>
+                          {client.name}
+                          {!clientName && (
+                            <button
+                              type="button"
+                              className="ml-2 text-[#E76F51] hover:text-red-700"
+                              onClick={() => setSelectedClients(selectedClients.filter(c => c.id !== client.id))}
+                              title="Remover cliente"
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {/* Client Dropdown */}
                   {showClientDropdown && !clientName && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl z-20 max-h-60 overflow-y-auto" style={{ border: '1px solid #DEE2E6' }}>
-                      {filteredClients.length > 0 ? (
+                      {filteredClients.filter(client => !selectedClients.some(c => c.id === client.id)).length > 0 ? (
                         <div className="py-2">
-                          {filteredClients.map((client) => (
+                          {filteredClients.filter(client => !selectedClients.some(c => c.id === client.id)).map((client) => (
                             <button
                               key={client.id}
                               type="button"
@@ -607,6 +649,69 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                     </button>
                   </div>
                 </div>
+              </div>
+              {/* Campo de link da reunião para sessões online - agora fora do grid, ocupa 100% */}
+              {sessionType === 'online' && (
+                <div className="mt-4 w-full">
+                  <label htmlFor="meetingLink" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                    Link da Reunião (Online)
+                  </label>
+                  <input
+                    id="meetingLink"
+                    type="url"
+                    value={meetingLink}
+                    onChange={e => setMeetingLink(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg transition-colors"
+                    style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
+                    onFocus={e => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={e => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    placeholder="https://meet.google.com/abc-defg-hij"
+                    required
+                  />
+                </div>
+              )}
+
+              {/* Valor da Consulta */}
+              <div>
+                <label htmlFor="sessionPrice" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                  Valor da Consulta (R$)
+                </label>
+                <input
+                  id="sessionPrice"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="^\d{1,5}(,\d{0,2})?$"
+                  value={formatCurrency(sessionPrice)}
+                  onChange={e => {
+                    const raw = e.target.value.replace(/[^\d]/g, '');
+                    if (raw.length > 6) return; // Limite para 999999 (9999.99)
+                    setSessionPrice(raw);
+                    setSessionPriceError('');
+                  }}
+                  className={`w-full px-4 py-3 rounded-lg transition-colors ${sessionPriceError ? 'border-red-400' : ''}`}
+                  style={{ border: sessionPriceError ? '1px solid #E76F51' : '1px solid #DEE2E6', color: '#343A40' }}
+                  onFocus={e => {
+                    e.target.style.borderColor = '#347474';
+                    e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                  }}
+                  onBlur={e => {
+                    e.target.style.borderColor = sessionPriceError ? '#E76F51' : '#DEE2E6';
+                    e.target.style.boxShadow = 'none';
+                  }}
+                  placeholder="Ex: 200,00"
+                  required
+                  maxLength={9}
+                  autoComplete="off"
+                />
+                {sessionPriceError && (
+                  <span className="text-xs text-[#E76F51] mt-1 block">{sessionPriceError}</span>
+                )}
               </div>
 
               {/* Notes Section */}
