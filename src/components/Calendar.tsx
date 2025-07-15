@@ -9,7 +9,7 @@ interface Session {
   client: string;
   clientEmail: string;
   duration: number; // em minutos
-  status: 'confirmado' | 'pendente';
+  status: 'confirmado' | 'pendente' | 'cancelado';
   sessionType: 'online' | 'presencial';
   paymentStatus: 'pago' | 'pendente';
   notes: string;
@@ -153,44 +153,32 @@ const Calendar: React.FC = () => {
       notes: 'Continuidade do tratamento para depressão.'
     },
     {
-      id: 5,
-      day: 'wednesday',
-      startTime: '15:30',
-      endTime: '16:20',
-      client: 'Ana Rodrigues',
-      clientEmail: 'ana@email.com',
+      id: 8,
+      day: 'friday',
+      startTime: '10:00',
+      endTime: '10:50',
+      client: 'Cliente A',
+      clientEmail: 'clientea@email.com',
       duration: 50,
-      status: 'confirmado',
+      status: 'cancelado',
       sessionType: 'presencial',
-      paymentStatus: 'pago',
-      notes: 'Técnicas de enfrentamento para estresse no trabalho.'
+      paymentStatus: 'pendente',
+      notes: 'Sessão cancelada para teste.'
     },
     {
-      id: 6,
-      day: 'thursday',
+      id: 9,
+      day: 'friday',
       startTime: '10:00',
-      endTime: '11:30',
-      client: 'João Silva',
-      clientEmail: 'joao@email.com',
-      duration: 90,
+      endTime: '10:50',
+      client: 'Cliente B',
+      clientEmail: 'clienteb@email.com',
+      duration: 50,
       status: 'confirmado',
       sessionType: 'online',
-      paymentStatus: 'pendente',
-      notes: 'Terapia cognitivo-comportamental para ansiedade social. Sessão estendida.'
-    },
-    {
-      id: 7,
-      day: 'friday',
-      startTime: '14:00',
-      endTime: '14:50',
-      client: 'Carla Ferreira',
-      clientEmail: 'carla@email.com',
-      duration: 50,
-      status: 'confirmado',
-      sessionType: 'presencial',
       paymentStatus: 'pago',
-      notes: 'Sessão de acompanhamento. Evolução positiva no quadro.'
+      notes: 'Sessão ativa para teste.'
     }
+    
   ]);
 
   // Bloqueios de tempo com cores personalizadas
@@ -216,17 +204,6 @@ const Calendar: React.FC = () => {
       duration: '60min',
       color: '#E76F51',
       emoji: '👥'
-    },
-    {
-      id: 3,
-      day: 'friday',
-      time: '16:00',
-      endTime: '18:00',
-      type: 'study',
-      title: 'Estudo/Atualização',
-      duration: '120min',
-      color: '#6C757D',
-      emoji: '📚'
     }
   ]);
 
