@@ -6,6 +6,7 @@ import ClientProfile from './ClientProfile';
 import Calendar from './Calendar';
 import Settings from './Settings';
 import SessionsHistory from './SessionsHistory';
+import FinancialPage from './FinancialPage';
 
 interface MainLayoutProps {
   onLogout: () => void;
@@ -26,6 +27,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onLogout }) => {
         return <SessionsHistory onNavigateToClient={() => setActiveTab('client-profile')} />;
       case 'calendar':
         return <Calendar />;
+      case 'financial':
+        return <FinancialPage />;
       case 'settings':
         return <Settings />;
       default:

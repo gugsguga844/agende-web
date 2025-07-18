@@ -8,7 +8,8 @@ import {
   Heart,
   FileText,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  DollarSign
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,6 +26,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) =
     { id: 'calendar', label: 'Agenda', icon: Calendar },
     { id: 'sessions', label: 'Sessões', icon: FileText },
     { id: 'clients', label: 'Clientes', icon: Users },
+    { id: 'financial', label: 'Financeiro', icon: DollarSign },
     { id: 'settings', label: 'Configurações', icon: Settings },
   ];
 
