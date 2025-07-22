@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, FileText, Bold, Italic, List, Clock, User, MapPin, Video, DollarSign, Search, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
 import AddClientModal from './AddClientModal';
+import RichTextEditor from './RichTextEditor';
 
 interface Client {
   id: number;
@@ -45,6 +46,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   const [toast, setToast] = useState<ToastMessage>({ type: 'success', message: '', show: false });
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
   const [meetingLink, setMeetingLink] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'cartao' | 'boleto' | 'dinheiro' | 'outro'>('pix');
   const [sessionPrice, setSessionPrice] = useState('');
   const [sessionPriceError, setSessionPriceError] = useState('');
 
@@ -88,6 +90,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       setErrorMessage('');
       setIsSubmitting(false);
       setMeetingLink('');
+      setPaymentMethod('pix');
       setSessionPrice('');
       setSessionPriceError('');
       
@@ -219,6 +222,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
         paymentStatus,
         notes,
         meetingLink: sessionType === 'online' ? meetingLink : undefined,
+        paymentMethod: paymentStatus === 'pago' ? paymentMethod : undefined,
         sessionPrice: priceNumber
       };
       
@@ -650,6 +654,26 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                   </div>
                 </div>
               </div>
+              {paymentStatus === 'pago' && (
+                <div className="mt-4 w-full">
+                  <label htmlFor="paymentMethod" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
+                    Método de Pagamento
+                  </label>
+                  <select
+                    id="paymentMethod"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value as 'pix' | 'cartao' | 'boleto' | 'dinheiro' | 'outro')}
+                    className="w-full px-4 py-3 rounded-lg transition-colors"
+                    style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
+                  >
+                    <option value="pix">Pix</option>
+                    <option value="cartao">Cartão</option>
+                    <option value="boleto">Boleto</option>
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </div>
+              )}
               {/* Campo de link da reunião para sessões online - agora fora do grid, ocupa 100% */}
               {sessionType === 'online' && (
                 <div className="mt-4 w-full">
@@ -733,60 +757,14 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                 {notesExpanded && (
                   <>
                     {/* Rich Text Toolbar */}
-                    <div className="flex items-center space-x-2 p-2 rounded-t-lg" style={{ 
-                      border: '1px solid #DEE2E6',
-                      backgroundColor: '#F8F9FA'
-                    }}>
-                      <button
-                        type="button"
-                        className="p-2 rounded transition-colors hover:bg-gray-200"
-                        style={{ color: '#6C757D' }}
-                        title="Negrito"
-                      >
-                        <Bold size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        className="p-2 rounded transition-colors hover:bg-gray-200"
-                        style={{ color: '#6C757D' }}
-                        title="Itálico"
-                      >
-                        <Italic size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        className="p-2 rounded transition-colors hover:bg-gray-200"
-                        style={{ color: '#6C757D' }}
-                        title="Lista"
-                      >
-                        <List size={16} />
-                      </button>
-                    </div>
-
-                    <textarea
-                      id="notes"
+                    <RichTextEditor
                       value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={mode === 'register' ? 8 : 4}
-                      className="w-full px-4 py-3 rounded-b-lg transition-colors resize-none"
-                      style={{ 
-                        border: '1px solid #DEE2E6',
-                        borderTop: 'none',
-                        color: '#343A40'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#347474';
-                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#DEE2E6';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      placeholder={mode === 'register' 
-                        ? "Descreva os pontos principais da sessão, evolução do paciente, técnicas utilizadas, observações importantes..."
-                        : "Adicione observações ou preparações para esta sessão..."
-                      }
+                      onChange={setNotes}
                       required={mode === 'register'}
+                      placeholder={mode === 'register'
+                        ? 'Descreva os pontos principais da sessão, evolução do paciente, técnicas utilizadas, observações importantes...'
+                        : 'Adicione observações ou preparações para esta sessão...'}
+                      disabled={isSubmitting}
                     />
                   </>
                 )}

@@ -109,8 +109,6 @@ label, p, span, input, textarea, button {
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border;
@@ -118,4 +116,22 @@ label, p, span, input, textarea, button {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Estilos para listas do editor Tiptap */
+.ProseMirror ul {
+  list-style-type: disc !important;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal !important;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  margin-left: 1.5em;
+  padding-left: 1.5em;
+}
+.ProseMirror li {
+  margin-bottom: 0.25em;
 }
