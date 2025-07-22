@@ -4,7 +4,7 @@ import Dashboard from './Dashboard';
 import ClientsList from './ClientsList';
 import ClientProfile from './ClientProfile';
 import Calendar from './Calendar';
-import Settings from './Settings';
+import Settings from './Settings/Settings';
 import SessionsHistory from './SessionsHistory';
 import FinancialPage from './FinancialPage';
 

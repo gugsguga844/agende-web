@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import { Bold as BoldIcon, Italic as ItalicIcon, Underline as UnderlineIcon, List as ListIcon, ListOrdered as ListOrderedIcon, RotateCcw, RotateCw } from 'lucide-react';
+import { Bold as BoldIcon, Italic as ItalicIcon, Underline as UnderlineIcon, List as ListIcon, ListOrdered as ListOrderedIcon, RotateCcw, RotateCw, Maximize, X as XIcon } from 'lucide-react';
 
 interface RichTextEditorProps {
   value: string;
@@ -69,6 +69,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, requir
   }, [value]);
 
   const [showStyleDropdown, setShowStyleDropdown] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fecha o dropdown ao clicar fora
@@ -94,128 +95,178 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, requir
   };
   const currentStyle = PARAGRAPH_STYLES.find(s => s.value === getBlockType()) || PARAGRAPH_STYLES[0];
 
-  return (
-    <div className="border border-[#DEE2E6] rounded-lg bg-white">
-      {/* Toolbar */}
-      <div className="flex items-center space-x-2 p-2 rounded-t-lg bg-[#F8F9FA] border-b border-[#DEE2E6]">
-        {/* Dropdown customizado de parágrafo */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            type="button"
-            className="flex items-center px-2 py-1 rounded border border-[#DEE2E6] text-sm bg-white focus:outline-none min-w-[120px]"
-            onClick={() => setShowStyleDropdown(v => !v)}
-            disabled={disabled}
-            aria-haspopup="listbox"
-            aria-expanded={showStyleDropdown}
-            tabIndex={0}
-          >
-            <span className={currentStyle.className}>{currentStyle.label}</span>
-            <svg className="ml-2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-          </button>
-          {showStyleDropdown && (
-            <div className="absolute left-0 mt-1 w-44 bg-white border border-[#DEE2E6] rounded-lg shadow-lg z-30" role="listbox">
-              {PARAGRAPH_STYLES.map(style => (
-                <button
-                  key={style.value}
-                  type="button"
-                  className={`w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 ${getBlockType() === style.value ? 'bg-gray-100' : ''}`}
-                  onClick={() => {
-                    setShowStyleDropdown(false);
-                    if (style.value === 'paragraph') editor.chain().focus().setParagraph().run();
-                    else if (style.value === 'h1') editor.chain().focus().toggleHeading({ level: 1 }).run();
-                    else if (style.value === 'h2') editor.chain().focus().toggleHeading({ level: 2 }).run();
-                    else if (style.value === 'h3') editor.chain().focus().toggleHeading({ level: 3 }).run();
-                  }}
-                  role="option"
-                  aria-selected={getBlockType() === style.value}
-                  tabIndex={0}
-                  disabled={disabled}
-                >
-                  {style.preview}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Bold */}
+  // Editor toolbar JSX (usado em ambos os modos)
+  const Toolbar = (
+    <div className="flex items-center space-x-2 p-2 rounded-t-lg bg-[#F8F9FA] border-b border-[#DEE2E6]">
+      {/* Dropdown customizado de parágrafo */}
+      <div className="relative" ref={dropdownRef}>
         <button
           type="button"
-          className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-200' : ''}`}
-          onClick={() => editor.chain().focus().toggleBold().run()}
+          className="flex items-center px-2 py-1 rounded border border-[#DEE2E6] text-sm bg-white focus:outline-none min-w-[120px]"
+          onClick={() => setShowStyleDropdown(v => !v)}
           disabled={disabled}
-          title="Negrito"
+          aria-haspopup="listbox"
+          aria-expanded={showStyleDropdown}
+          tabIndex={0}
         >
-          <BoldIcon size={16} />
+          <span className={currentStyle.className}>{currentStyle.label}</span>
+          <svg className="ml-2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
         </button>
-        {/* Italic */}
-        <button
-          type="button"
-          className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-200' : ''}`}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          disabled={disabled}
-          title="Itálico"
-        >
-          <ItalicIcon size={16} />
-        </button>
-        {/* Underline */}
-        <button
-          type="button"
-          className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('underline') ? 'bg-gray-200' : ''}`}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-          disabled={disabled}
-          title="Sublinhado"
-        >
-          <UnderlineIcon size={16} />
-        </button>
-        {/* Bullet List */}
-        <button
-          type="button"
-          className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('bulletList') ? 'bg-gray-200' : ''}`}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          disabled={disabled}
-          title="Lista com Marcadores"
-        >
-          <ListIcon size={16} />
-        </button>
-        {/* Ordered List */}
-        <button
-          type="button"
-          className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-200' : ''}`}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          disabled={disabled}
-          title="Lista Numerada"
-        >
-          <ListOrderedIcon size={16} />
-        </button>
-        {/* Undo */}
-        <button
-          type="button"
-          className="p-2 rounded transition-colors hover:bg-gray-200"
-          onClick={() => editor.chain().focus().undo().run()}
-          disabled={disabled || !editor.can().undo()}
-          title="Desfazer"
-        >
-          <RotateCcw size={16} />
-        </button>
-        {/* Redo */}
-        <button
-          type="button"
-          className="p-2 rounded transition-colors hover:bg-gray-200"
-          onClick={() => editor.chain().focus().redo().run()}
-          disabled={disabled || !editor.can().redo()}
-          title="Refazer"
-        >
-          <RotateCw size={16} />
-        </button>
+        {showStyleDropdown && (
+          <div className="absolute left-0 mt-1 w-44 bg-white border border-[#DEE2E6] rounded-lg shadow-lg z-30" role="listbox">
+            {PARAGRAPH_STYLES.map(style => (
+              <button
+                key={style.value}
+                type="button"
+                className={`w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-2 ${getBlockType() === style.value ? 'bg-gray-100' : ''}`}
+                onClick={() => {
+                  setShowStyleDropdown(false);
+                  if (style.value === 'paragraph') editor.chain().focus().setParagraph().run();
+                  else if (style.value === 'h1') editor.chain().focus().toggleHeading({ level: 1 }).run();
+                  else if (style.value === 'h2') editor.chain().focus().toggleHeading({ level: 2 }).run();
+                  else if (style.value === 'h3') editor.chain().focus().toggleHeading({ level: 3 }).run();
+                }}
+                role="option"
+                aria-selected={getBlockType() === style.value}
+                tabIndex={0}
+                disabled={disabled}
+              >
+                {style.preview}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {/* Editor Content */}
-      <EditorContent editor={editor} />
-      {/* Required field message */}
+      {/* Bold */}
+      <button
+        type="button"
+        className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('bold') ? 'bg-gray-200' : ''}`}
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        disabled={disabled}
+        title="Negrito"
+      >
+        <BoldIcon size={16} />
+      </button>
+      {/* Italic */}
+      <button
+        type="button"
+        className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('italic') ? 'bg-gray-200' : ''}`}
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        disabled={disabled}
+        title="Itálico"
+      >
+        <ItalicIcon size={16} />
+      </button>
+      {/* Underline */}
+      <button
+        type="button"
+        className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('underline') ? 'bg-gray-200' : ''}`}
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+        disabled={disabled}
+        title="Sublinhado"
+      >
+        <UnderlineIcon size={16} />
+      </button>
+      {/* Bullet List */}
+      <button
+        type="button"
+        className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('bulletList') ? 'bg-gray-200' : ''}`}
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        disabled={disabled}
+        title="Lista com Marcadores"
+      >
+        <ListIcon size={16} />
+      </button>
+      {/* Ordered List */}
+      <button
+        type="button"
+        className={`p-2 rounded transition-colors hover:bg-gray-200 ${editor.isActive('orderedList') ? 'bg-gray-200' : ''}`}
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        disabled={disabled}
+        title="Lista Numerada"
+      >
+        <ListOrderedIcon size={16} />
+      </button>
+      {/* Undo */}
+      <button
+        type="button"
+        className="p-2 rounded transition-colors hover:bg-gray-200"
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={disabled || !editor.can().undo()}
+        title="Desfazer"
+      >
+        <RotateCcw size={16} />
+      </button>
+      {/* Redo */}
+      <button
+        type="button"
+        className="p-2 rounded transition-colors hover:bg-gray-200"
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={disabled || !editor.can().redo()}
+        title="Refazer"
+      >
+        <RotateCw size={16} />
+      </button>
+      {/* Expandir/Fechar */}
+      {!expanded && (
+        <button
+          type="button"
+          className="ml-auto p-2 rounded transition-colors hover:bg-gray-200"
+          onClick={() => setExpanded(true)}
+          title="Expandir editor"
+          disabled={disabled}
+        >
+          <Maximize size={18} />
+        </button>
+      )}
+      {expanded && (
+        <button
+          type="button"
+          className="ml-auto p-2 rounded transition-colors hover:bg-gray-200"
+          onClick={() => setExpanded(false)}
+          title="Fechar editor expandido"
+        >
+          <XIcon size={18} />
+        </button>
+      )}
+    </div>
+  );
+
+  // Editor principal (usado em ambos os modos)
+  const EditorBox = (
+    <div className="border border-[#DEE2E6] rounded-lg bg-white flex flex-col h-full">
+      {Toolbar}
+      <div className="flex-1 min-h-[120px]">
+        <EditorContent editor={editor} />
+      </div>
       {required && !value && (
         <div className="text-xs text-[#E76F51] px-4 py-1">Este campo é obrigatório.</div>
       )}
     </div>
   );
+
+  // Overlay expandido
+  if (expanded) {
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-60">
+        <div className="w-[80vw] max-w-3xl h-[80vh] max-h-[90vh] flex flex-col">
+          {EditorBox}
+          <div className="flex justify-end p-4 bg-white border-t border-[#DEE2E6] rounded-b-lg">
+            <button
+              type="button"
+              className="px-6 py-2 rounded-lg bg-[#347474] text-white font-semibold text-base shadow hover:bg-[#2d6363] transition-colors"
+              onClick={() => setExpanded(false)}
+            >
+              Concluir
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Modo normal
+  return EditorBox;
 };
 
 export default RichTextEditor; 
