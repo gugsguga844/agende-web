@@ -162,13 +162,6 @@ const NotificationSettings: React.FC = () => {
             </div>
             <Switch checked={prefs.tipsAndArticles} onChange={() => handleToggle('tipsAndArticles')} />
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-medium">Alertas importantes da conta <span className="ml-2 text-xs font-semibold text-[#2563EB]">(Obrigatório)</span></span>
-              <p className="text-sm text-[#6C757D]">Notificações sobre segurança ou faturação. Essas notificações são essenciais para a segurança e funcionamento da sua conta e não podem ser desativadas.</p>
-            </div>
-            <Switch checked={prefs.accountAlerts} onChange={() => {}} disabled />
-          </div>
         </div>
       </section>
       <div className="flex justify-end pt-4">
