@@ -117,6 +117,16 @@ export async function addClient(payload: ClientPayload) {
   }
 }
 
+export async function getClients() {
+  try {
+    const res = await apiGet(endpoints.clients);
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
 export async function getSessions() {
   try {
     const res = await apiGet(endpoints.sessions);
