@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { User, Lock, Heart, Eye, EyeOff, Mail, ArrowLeft, Check, X } from 'lucide-react';
+import { register } from '@/lib/api';
+import { useToast } from './ui/ToastContext';
 
 interface RegisterPageProps {
   onRegister: () => void;
@@ -16,7 +18,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackToLogin }
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
+  const { showToast } = useToast();
   // Password strength calculation
   const calculatePasswordStrength = (password: string) => {
     let score = 0;
@@ -91,11 +93,16 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackToLogin }
 
     setIsLoading(true);
     
-    // Simulate registration process
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsLoading(false);
-    onRegister();
+    try {
+      const res = await register({ full_name: fullName, email, password, password_confirmation: confirmPassword });
+      console.log(res);
+      setIsLoading(false);
+      showToast('Conta criada com sucesso!', 'success');
+      onRegister();
+    } catch (err: any) {
+      console.error(err);
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleRegister = () => {

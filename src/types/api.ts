@@ -1,3 +1,26 @@
+export interface RegisterPayload {
+  full_name: string;
+  email: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface ClientPayload {
+  full_name: string;
+  email?: string;
+  phone?: string;
+  birth_date?: string;
+  cpf_nif?: string;
+  emergency_contact?: string;
+  case_summary?: string;
+  status: 'Active' | 'Inactive';
+}
+
 export interface AddSessionPayload {
   client_ids: number[];
   start_time: string; // ISO string

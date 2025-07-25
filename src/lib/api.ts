@@ -1,5 +1,5 @@
 import { endpoints } from './endpoints';
-import { AddSessionPayload } from '../types/api';
+import { RegisterPayload, AddSessionPayload, ClientPayload } from '../types/api';
 
 const baseUrl = 'https://sessio-api-production.up.railway.app/api';
 
@@ -86,7 +86,7 @@ export async function login(payload: { email: string; password: string }) {
   }
 }
 
-export async function register(payload: { email: string; password: string }) {
+export async function register(payload: RegisterPayload) {
   try {
     // skipAuth = true para não enviar o token no register
     const res = await apiPost(endpoints.register, payload, {}, true);
@@ -100,6 +100,16 @@ export async function register(payload: { email: string; password: string }) {
 export async function getUser() {
   try {
     const res = await apiGet(endpoints.getUser);
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+export async function addClient(payload: ClientPayload) {
+  try {
+    const res = await apiPost(endpoints.clients, payload);
     return res;
   } catch (err) {
     console.error(err);
