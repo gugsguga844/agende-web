@@ -1,4 +1,5 @@
 import { endpoints } from './endpoints';
+import { AddSessionPayload } from '../types/api';
 
 const baseUrl = 'https://sessio-api-production.up.railway.app/api';
 
@@ -31,8 +32,14 @@ async function apiPost(endpoint: string, data: any, customHeaders: any = {}, ski
       headers: getAuthHeaders(customHeaders, skipAuth),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(`Erro: ${res.status}`);
-    return await res.json();
+    const responseBody = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error: any = new Error(responseBody?.message || `Erro: ${res.status}`);
+      error.status = res.status;
+      error.body = responseBody;
+      throw error;
+    }
+    return responseBody;
   } catch (err) {
     console.error(err);
     throw err;
@@ -100,4 +107,52 @@ export async function getUser() {
   }
 }
 
-export { apiGet, apiPost, apiPut, apiDelete, baseUrl }; 
+export async function getSessions() {
+  try {
+    const res = await apiGet(endpoints.sessions);
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+export async function addSession(payload: AddSessionPayload) {
+  try {
+    const res = await apiPost(endpoints.sessions, payload);
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+export async function getSession(id: string) {
+  try {
+    const res = await apiGet(endpoints.session.replace(':id', id));
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+} 
+
+export async function updateSession(id: string, payload: { name: string; description: string; date: string }) {
+  try {
+    const res = await apiPut(endpoints.session.replace(':id', id), payload);
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+export async function deleteSession(id: string) {
+  try {
+    const res = await apiDelete(endpoints.session.replace(':id', id));
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}

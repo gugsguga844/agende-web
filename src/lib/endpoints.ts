@@ -1,8 +1,10 @@
 export const endpoints = {
-  register: '/api/register',
-  login: '/api/login',
-  logout: '/api/logout',
-  getUser: '/api/me',
-  clients: '/api/clients',
-  client: '/api/clients/:id',
+  register: '/register',
+  login: '/login',
+  logout: '/logout',
+  getUser: '/me',
+  clients: '/clients',
+  client: '/clients/:id',
+  sessions: '/sessions',
+  session: '/sessions/:id',
 };

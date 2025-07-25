@@ -409,32 +409,43 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
       <div>
           <h2 className="text-xl font-semibold text-[#1F2937] mb-4">Próximas Sessões do Dia</h2>
           <div className="space-y-4">
-            {[
-              {
-                time: "14:00",
-                client: "Juliana Costa",
-                isFirstSession: false,
-                type: "Presencial",
-                paymentStatus: "Pago",
-                notes: "Ansiedade generalizada - CBT",
-              },
-              {
-                time: "15:30",
-                client: "Carlos Santos",
-                isFirstSession: true,
-                type: "Online",
-                paymentStatus: "Pendente",
-                notes: "Primeira consulta - Avaliação inicial",
-              },
-              {
-                time: "17:00",
-                client: "Maria Oliveira",
-                isFirstSession: false,
-                type: "Presencial",
-                paymentStatus: "Pago",
-                notes: "Terapia de casal - Sessão 8",
-              },
-            ].map((session, index) => (
+            {(() => {
+              // Substituir o array mock por uma variável para facilitar a lógica
+              type TodaySession = {
+                time: string;
+                client: string;
+                isFirstSession: boolean;
+                type: string;
+                paymentStatus: string;
+                notes: string;
+              };
+              const todaySessions: TodaySession[] = [
+                // Exemplo de mock, pode ser [] para testar o estado vazio
+                // {
+                //   time: "14:00",
+                //   client: "Juliana Costa",
+                //   isFirstSession: false,
+                //   type: "Presencial",
+                //   paymentStatus: "Pago",
+                //   notes: "Ansiedade generalizada - CBT",
+                // },
+              ];
+              if (todaySessions.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-dashed border-[#DEE2E6] text-center shadow-sm">
+                    <Calendar size={48} className="mb-4 text-[#347474]" />
+                    <h4 className="text-lg font-semibold mb-2" style={{ color: '#343A40' }}>Nenhuma sessão agendada para hoje</h4>
+                    <p className="text-[#6C757D] mb-6">Você ainda não possui sessões marcadas para este dia.<br />Que tal agendar uma nova sessão?</p>
+                    <Button
+                      className="bg-[#347474] hover:bg-[#285d5d] text-white px-6 py-3 rounded-lg font-semibold text-base"
+                      onClick={() => openAddSessionModal(undefined, 'schedule')}
+                    >
+                      <Plus className="w-5 h-5 mr-2" /> Agendar Nova Sessão
+                    </Button>
+                  </div>
+                );
+              }
+              return todaySessions.map((session, index) => (
               <Card
                 key={index}
                 className="bg-white hover:shadow-md transition-all duration-200 border-l-4 border-l-[#347474]"
@@ -543,7 +554,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient }) => {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              ));
+            })()}
           </div>
         </div>
     </div>

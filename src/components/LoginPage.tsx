@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
 import { User, Lock, Heart, Eye, EyeOff, Mail, ArrowLeft } from 'lucide-react';
-
-// Ilustração SVG simpática para o topo do card
-const FriendlyIllustration = () => (
-  <svg width="90" height="90" viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" className="mx-auto mb-4">
-    <circle cx="45" cy="45" r="45" fill="#F4A261" fillOpacity="0.18"/>
-    <ellipse cx="45" cy="55" rx="22" ry="12" fill="#347474" fillOpacity="0.13"/>
-    <ellipse cx="45" cy="38" rx="18" ry="18" fill="#347474" fillOpacity="0.18"/>
-    <path d="M38 44c0 3 3 5 7 5s7-2 7-5" stroke="#347474" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="39" cy="40" r="2.5" fill="#347474"/>
-    <circle cx="51" cy="40" r="2.5" fill="#347474"/>
-    <ellipse cx="45" cy="45" rx="30" ry="10" fill="#347474" fillOpacity="0.04"/>
-  </svg>
-);
+import { login } from '@/lib/api';
+import { useToast } from './ui/ToastContext';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -27,16 +16,29 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToRegister }) 
   const [currentView, setCurrentView] = useState<'login' | 'forgot-password' | 'reset-sent'>('login');
   const [forgotEmail, setForgotEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setLoginError(null);
     
-    // Simulate login process
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsLoading(false);
-    onLogin();
+    try {
+      const res = await login({ email, password });
+      console.log(res);
+      setIsLoading(false);
+      showToast('Login realizado com sucesso!', 'success');
+      onLogin();
+    } catch (err: any) {
+      console.error(err);
+      setIsLoading(false);
+      if (err.status === 422) {
+        setLoginError('E-mail ou senha incorretos. Por favor, tente novamente.');
+      } else {
+        setLoginError('Erro ao fazer login. Tente novamente mais tarde.');
+      }
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -74,6 +76,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToRegister }) 
 
       {/* Login Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
+        {loginError && (
+          <div className="mb-4 p-3 rounded-lg bg-red-100 border border-red-300 text-red-700 text-sm text-center">
+            {loginError}
+          </div>
+        )}
         <div>
           <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
             E-mail

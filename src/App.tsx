@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import MainLayout from './components/MainLayout';
+import { ToastProvider } from './components/ui/ToastContext';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -20,23 +21,25 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
-      {isAuthenticated ? (
-        <MainLayout onLogout={handleLogout} />
-      ) : (
-        currentView === 'login' ? (
-          <LoginPage 
-            onLogin={handleLogin} 
-            onNavigateToRegister={() => setCurrentView('register')}
-          />
+    <ToastProvider>
+      <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
+        {isAuthenticated ? (
+          <MainLayout onLogout={handleLogout} />
         ) : (
-          <RegisterPage 
-            onRegister={handleRegister}
-            onBackToLogin={() => setCurrentView('login')}
-          />
-        )
-      )}
-    </div>
+          currentView === 'login' ? (
+            <LoginPage 
+              onLogin={handleLogin} 
+              onNavigateToRegister={() => setCurrentView('register')}
+            />
+          ) : (
+            <RegisterPage 
+              onRegister={handleRegister}
+              onBackToLogin={() => setCurrentView('login')}
+            />
+          )
+        )}
+      </div>
+    </ToastProvider>
   );
 }
 
