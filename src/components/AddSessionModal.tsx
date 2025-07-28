@@ -2,11 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, FileText, Bold, Italic, List, Clock, User, MapPin, Video, DollarSign, Search, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
 import AddClientModal from './AddClientModal';
 import RichTextEditor from './RichTextEditor';
+import { getClients } from '../lib/api';
+import { addSession } from '../lib/api';
+import { AddSessionPayload } from '../types/api';
+import { useToast } from './ui/ToastContext';
 
 interface Client {
   id: number;
-  name: string;
+  user_id: number;
+  full_name: string;
   email: string;
+  phone?: string;
+  birth_date?: string;
+  cpf_nif?: string;
+  emergency_contact?: string;
+  case_summary?: string | null;
+  status: 'Active' | 'Inactive';
+  created_at: string;
+  updated_at: string;
 }
 
 interface AddSessionModalProps {
@@ -50,16 +63,29 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   const [sessionPrice, setSessionPrice] = useState('');
   const [sessionPriceError, setSessionPriceError] = useState('');
 
-  // Sample clients data
-  const clients: Client[] = [
-    { id: 1, name: 'Juliana Costa', email: 'juliana@email.com' },
-    { id: 2, name: 'Carlos Mendes', email: 'carlos@email.com' },
-    { id: 3, name: 'Maria Santos', email: 'maria@email.com' },
-    { id: 4, name: 'Pedro Oliveira', email: 'pedro@email.com' },
-    { id: 5, name: 'Ana Rodrigues', email: 'ana@email.com' },
-    { id: 6, name: 'João Silva', email: 'joao@email.com' },
-    { id: 7, name: 'Carla Ferreira', email: 'carla@email.com' }
-  ];
+  // Estado para clientes vindos da API
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientsError, setClientsError] = useState<string | null>(null);
+
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (isOpen) {
+      setClientsLoading(true);
+      setClientsError(null);
+      getClients()
+        .then((data) => {
+          // Ajuste conforme o formato retornado pela API
+          setClients(Array.isArray(data) ? data : data.data || []);
+        })
+        .catch((err) => {
+          console.error(err);
+          setClientsError('Erro ao buscar clientes.');
+        })
+        .finally(() => setClientsLoading(false));
+    }
+  }, [isOpen]);
 
   // Sample existing sessions for conflict detection
   const existingSessions = [
@@ -69,8 +95,8 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
 
   // Filter clients based on search
   const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    client.email.toLowerCase().includes(clientSearch.toLowerCase())
+    client.full_name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    (client.email?.toLowerCase() || '').includes(clientSearch.toLowerCase())
   );
 
   // Initialize form when modal opens
@@ -96,10 +122,10 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       
       // Set client if provided
       if (clientName) {
-        const client = clients.find(c => c.name === clientName);
+        const client = clients.find(c => c.full_name === clientName);
         if (client) {
           setSelectedClients([client]);
-          setClientSearch(client.name);
+          setClientSearch(client.full_name);
         }
       } else {
         setSelectedClients([]);
@@ -163,10 +189,6 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
 
-  const showToast = (type: 'success' | 'error', message: string) => {
-    setToast({ type, message, show: true });
-  };
-
   // Função para formatar valor como moeda
   function formatCurrency(value: string) {
     const clean = value.replace(/[^\d]/g, '');
@@ -175,67 +197,88 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
     return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
+  // Função para scroll suave ao topo do modal
+  const scrollToTop = () => {
+    const modalContent = document.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage('');
     setSessionPriceError('');
-    
+
     try {
       // Get final duration value
       const finalDuration = isCustomDuration ? parseInt(customDuration) : parseInt(duration);
-      
+
       // Validate custom duration
       if (isCustomDuration && (!customDuration || finalDuration <= 0 || finalDuration > 480)) {
         setErrorMessage('A duração deve ser entre 1 e 480 minutos.');
+        scrollToTop();
         setIsSubmitting(false);
         return;
       }
 
       // Validação do valor
-      const priceNumber = Number(sessionPrice.replace(/[^\d,\.]/g, '').replace(',', '.'));
-      if (isNaN(priceNumber) || priceNumber <= 0 || priceNumber > 9999.99) {
-        setSessionPriceError('Informe um valor válido entre R$ 0,01 e R$ 9.999,99');
+      const priceNumber = Number(sessionPrice) / 100;
+      if (isNaN(priceNumber) || priceNumber <= 0 || priceNumber > 999999.99) {
+        setSessionPriceError('Informe um valor válido entre R$ 0,01 e R$ 999.999,99');
+        scrollToTop();
         setIsSubmitting(false);
         return;
       }
 
       // Check for time conflicts
       const hasConflict = checkTimeConflict(date, startTime, finalDuration);
-      
+
       if (hasConflict) {
         setErrorMessage('Conflito de horário detectado. Este período já está ocupado por outra sessão.');
+        scrollToTop();
         setIsSubmitting(false);
         return;
       }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const sessionData = {
-        clients: selectedClients,
-        date,
-        startTime,
-        duration: finalDuration,
-        sessionTitle,
-        sessionType,
-        paymentStatus,
-        notes,
-        meetingLink: sessionType === 'online' ? meetingLink : undefined,
-        paymentMethod: paymentStatus === 'pago' ? paymentMethod : undefined,
-        sessionPrice: priceNumber
+      // Montar payload conforme AddSessionPayload
+      const payload: AddSessionPayload = {
+        client_ids: selectedClients.map(c => c.id),
+        start_time: `${date}T${startTime}:00`, // Removido o Z para usar fuso horário local
+        duration_min: finalDuration,
+        focus_topic: sessionTitle,
+        session_notes: notes,
+        type: sessionType === 'online' ? 'Online' : 'In-person',
+        meeting_url: sessionType === 'online' ? meetingLink : undefined,
+        payment_status: paymentStatus === 'pago' ? 'Paid' : 'Pending',
+        payment_method: paymentStatus === 'pago' ? paymentMethod : undefined,
+        price: priceNumber,
+        session_status: mode === 'register' ? 'Completed' : 'Scheduled',
       };
-      
-      console.log('Session data:', sessionData);
-      
-      // Success - close modal and show toast
+
+      console.log('Payload enviado para addSession:', payload);
+      await addSession(payload);
+
       onClose();
-      
       const actionText = mode === 'register' ? 'registrada' : 'agendada';
-      showToast('success', `Sessão com ${selectedClients.map(c => c.name).join(', ')} ${actionText} com sucesso.`);
       
-    } catch (error) {
-      setErrorMessage('Erro interno do servidor. Tente novamente em alguns instantes.');
+      // Determinar o texto do toast baseado no número de clientes
+      let toastMessage;
+      if (selectedClients.length === 1) {
+        toastMessage = `Sessão de ${selectedClients[0].full_name} ${actionText} com sucesso.`;
+      } else {
+        toastMessage = `Sessão em grupo ${actionText} com sucesso.`;
+      }
+      
+      showToast(toastMessage, 'success');
+
+    } catch (error: any) {
+      setErrorMessage(error?.body?.message || 'Erro interno do servidor. Tente novamente em alguns instantes.');
+      scrollToTop();
     } finally {
       setIsSubmitting(false);
     }
@@ -275,7 +318,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-content">
             {/* Header */}
             <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #DEE2E6' }}>
               <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>
@@ -359,7 +402,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                     <div className="flex flex-wrap gap-2 mt-2">
                       {selectedClients.map(client => (
                         <span key={client.id} className="flex items-center bg-[#F8F9FA] rounded-full px-3 py-1 text-sm font-medium" style={{ color: '#343A40', border: '1px solid #DEE2E6' }}>
-                          {client.name}
+                          {client.full_name}
                           {!clientName && (
                             <button
                               type="button"
@@ -377,7 +420,35 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                   {/* Client Dropdown */}
                   {showClientDropdown && !clientName && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl z-20 max-h-60 overflow-y-auto" style={{ border: '1px solid #DEE2E6' }}>
-                      {filteredClients.filter(client => !selectedClients.some(c => c.id === client.id)).length > 0 ? (
+                      {clientsLoading ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                          <div className="w-10 h-10 border-4 border-[#347474] border-t-transparent rounded-full animate-spin mb-4"></div>
+                          <p className="text-[#6C757D]">Carregando clientes...</p>
+                        </div>
+                      ) : clientsError ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#F8F9FA] mb-4 border border-dashed border-[#DEE2E6]">
+                            <User size={36} className="text-[#B0BEC5]" />
+                          </div>
+                          <h4 className="text-lg font-semibold mb-2" style={{ color: '#E76F51' }}>Erro ao buscar clientes</h4>
+                          <p className="text-[#6C757D] mb-4">Não foi possível carregar a lista de clientes.<br/>Tente novamente mais tarde.</p>
+                        </div>
+                      ) : clients.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
+                          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[#F8F9FA] mb-4 border border-dashed border-[#DEE2E6]">
+                            <User size={36} className="text-[#B0BEC5]" />
+                          </div>
+                          <h4 className="text-lg font-semibold mb-2" style={{ color: '#343A40' }}>Nenhum cliente cadastrado</h4>
+                          <p className="text-[#6C757D] mb-4">Para agendar uma sessão, é necessário cadastrar pelo menos um cliente.<br/>Clique em <span className='font-semibold' style={{ color: '#347474' }}>'Adicionar novo cliente'</span> para começar.</p>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddClientModalOpen(true)}
+                            className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-[#347474] text-white font-semibold text-base shadow hover:bg-[#285d5d] transition-colors"
+                          >
+                            <User size={18} /> Adicionar novo cliente
+                          </button>
+                        </div>
+                      ) : filteredClients.filter(client => !selectedClients.some(c => c.id === client.id)).length > 0 ? (
                         <div className="py-2">
                           {filteredClients.filter(client => !selectedClients.some(c => c.id === client.id)).map((client) => (
                             <button
@@ -390,7 +461,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                                 <User size={16} style={{ color: '#6C757D' }} />
                               </div>
                               <div>
-                                <div className="font-medium" style={{ color: '#343A40' }}>{client.name}</div>
+                                <div className="font-medium" style={{ color: '#343A40' }}>{client.full_name}</div>
                                 <div className="text-sm" style={{ color: '#6C757D' }}>{client.email}</div>
                               </div>
                             </button>
@@ -709,12 +780,10 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                 <input
                   id="sessionPrice"
                   type="text"
-                  inputMode="numeric"
-                  pattern="^\d{1,5}(,\d{0,2})?$"
                   value={formatCurrency(sessionPrice)}
                   onChange={e => {
                     const raw = e.target.value.replace(/[^\d]/g, '');
-                    if (raw.length > 6) return; // Limite para 999999 (9999.99)
+                    if (raw.length > 8) return; // Limite para 99999999 (999999,99)
                     setSessionPrice(raw);
                     setSessionPriceError('');
                   }}
@@ -730,7 +799,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                   }}
                   placeholder="Ex: 200,00"
                   required
-                  maxLength={9}
+                  maxLength={11}
                   autoComplete="off"
                 />
                 {sessionPriceError && (

@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Calendar, FileText, ChevronDown, CheckCircle, AlertCircle, CreditCard, UserPlus } from 'lucide-react';
+import { addClient } from '../lib/api';
+import { getUser } from '../lib/api';
+import { ClientPayload } from '../types/api';
+import { useToast } from './ui/ToastContext';
 
 interface AddClientModalProps {
   isOpen: boolean;
@@ -17,7 +21,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [status, setStatus] = useState<'Ativo' | 'Inativo'>('Ativo');
+  const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
   
   // Additional information fields
   const [birthDate, setBirthDate] = useState('');
@@ -28,7 +32,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
   const [isAdditionalInfoExpanded, setIsAdditionalInfoExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [toast, setToast] = useState<ToastMessage>({ type: 'success', message: '', show: false });
+  const { showToast } = useToast();
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -37,7 +41,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
       setFullName('');
       setEmail('');
       setPhone('');
-      setStatus('Ativo');
+      setStatus('Active');
       setBirthDate('');
       setCpfNif('');
       setEmergencyContact('');
@@ -47,17 +51,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  // Toast auto-hide effect
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => {
-        setToast(prev => ({ ...prev, show: false }));
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast.show]);
-
-  if (!isOpen && !toast.show) return null;
+  if (!isOpen) return null;
 
   // Validation
   const validateForm = () => {
@@ -105,45 +99,39 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
     setCpfNif(formatted);
   };
 
-  const showToast = (type: 'success' | 'error', message: string) => {
-    setToast({ type, message, show: true });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setIsSubmitting(true);
+    setErrors({});
     if (!validateForm()) {
+      setIsSubmitting(false);
       return;
     }
 
-    setIsSubmitting(true);
+    try {
+      const user = await getUser();
+      console.log('Usuário logado ao adicionar cliente:', user);
+    } catch (err) {
+      console.log('Erro ao obter usuário logado:', err);
+    }
+
+    const payload: ClientPayload = {
+      full_name: fullName,
+      status,
+      ...(email && { email }),
+      ...(phone && { phone }),
+      ...(birthDate && { birth_date: birthDate }),
+      ...(cpfNif && { cpf_nif: cpfNif }),
+      ...(emergencyContact && { emergency_contact: emergencyContact }),
+    };
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      const clientData = {
-        fullName: fullName.trim(),
-        email: email.trim() || null,
-        phone: phone.trim() || null,
-        status,
-        birthDate: birthDate || null,
-        cpfNif: cpfNif.trim() || null,
-        emergencyContact: emergencyContact.trim() || null,
-        createdAt: new Date().toISOString()
-      };
-
-      console.log('Client data to save:', clientData);
-
-      // Success - close modal and show toast
+      await addClient(payload);
       onClose();
-      showToast('success', `Cliente "${fullName}" adicionado com sucesso.`);
-
+      showToast(`Cliente "${fullName}" adicionado com sucesso.`, 'success');
     } catch (error) {
-      console.error('Error saving client:', error);
-      setErrors({ general: 'Não foi possível salvar o cliente. Tente novamente.' });
-    } finally {
       setIsSubmitting(false);
+      showToast('Erro ao adicionar cliente. Tente novamente.', 'error');
     }
   };
 
@@ -300,16 +288,16 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
                   <div className="flex space-x-3">
                     <button
                       type="button"
-                      onClick={() => setStatus('Ativo')}
+                      onClick={() => setStatus('Active')}
                       className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg transition-colors ${
-                        status === 'Ativo' 
+                        status === 'Active' 
                           ? 'text-white' 
                           : 'hover:bg-gray-50'
                       }`}
                       style={{
-                        backgroundColor: status === 'Ativo' ? '#347474' : 'transparent',
+                        backgroundColor: status === 'Active' ? '#347474' : 'transparent',
                         border: '1px solid #DEE2E6',
-                        color: status === 'Ativo' ? '#FFFFFF' : '#343A40'
+                        color: status === 'Active' ? '#FFFFFF' : '#343A40'
                       }}
                     >
                       <CheckCircle size={16} />
@@ -317,16 +305,16 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setStatus('Inativo')}
+                      onClick={() => setStatus('Inactive')}
                       className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-lg transition-colors ${
-                        status === 'Inativo' 
+                        status === 'Inactive' 
                           ? 'text-white' 
                           : 'hover:bg-gray-50'
                       }`}
                       style={{
-                        backgroundColor: status === 'Inativo' ? '#6C757D' : 'transparent',
+                        backgroundColor: status === 'Inactive' ? '#6C757D' : 'transparent',
                         border: '1px solid #DEE2E6',
-                        color: status === 'Inativo' ? '#FFFFFF' : '#343A40'
+                        color: status === 'Inactive' ? '#FFFFFF' : '#343A40'
                       }}
                     >
                       <X size={16} />
@@ -504,51 +492,6 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
       )}
-
-      {/* Toast Notification */}
-      {toast.show && (
-        <div 
-          className="fixed top-4 right-4 z-[100] transition-all duration-300 ease-in-out transform"
-          style={{
-            animation: 'slideInFromRight 0.3s ease-out'
-          }}
-        >
-          <div 
-            className="flex items-center space-x-3 px-4 py-3 rounded-lg shadow-lg max-w-sm min-w-[300px]"
-            style={{
-              backgroundColor: toast.type === 'success' ? '#347474' : '#E76F51',
-              color: '#FFFFFF'
-            }}
-          >
-            {toast.type === 'success' ? (
-              <CheckCircle size={20} className="flex-shrink-0" />
-            ) : (
-              <AlertCircle size={20} className="flex-shrink-0" />
-            )}
-            <p className="font-medium flex-1">{toast.message}</p>
-            <button
-              onClick={() => setToast(prev => ({ ...prev, show: false }))}
-              className="ml-2 hover:bg-white hover:bg-opacity-20 rounded-full p-1 transition-colors flex-shrink-0"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* CSS Animation */}
-      <style jsx>{`
-        @keyframes slideInFromRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-      `}</style>
     </>
   );
 };

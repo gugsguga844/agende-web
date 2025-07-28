@@ -27,6 +27,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToRegister }) 
     try {
       const res = await login({ email, password });
       console.log(res);
+      if (res && res.token) {
+        localStorage.setItem('token', res.token);
+      }
       setIsLoading(false);
       showToast('Login realizado com sucesso!', 'success');
       onLogin();
