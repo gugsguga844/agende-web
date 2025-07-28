@@ -197,6 +197,17 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
     return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
+  // Função para scroll suave ao topo do modal
+  const scrollToTop = () => {
+    const modalContent = document.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -210,6 +221,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       // Validate custom duration
       if (isCustomDuration && (!customDuration || finalDuration <= 0 || finalDuration > 480)) {
         setErrorMessage('A duração deve ser entre 1 e 480 minutos.');
+        scrollToTop();
         setIsSubmitting(false);
         return;
       }
@@ -218,6 +230,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       const priceNumber = Number(sessionPrice) / 100;
       if (isNaN(priceNumber) || priceNumber <= 0 || priceNumber > 999999.99) {
         setSessionPriceError('Informe um valor válido entre R$ 0,01 e R$ 999.999,99');
+        scrollToTop();
         setIsSubmitting(false);
         return;
       }
@@ -227,6 +240,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
 
       if (hasConflict) {
         setErrorMessage('Conflito de horário detectado. Este período já está ocupado por outra sessão.');
+        scrollToTop();
         setIsSubmitting(false);
         return;
       }
@@ -234,7 +248,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       // Montar payload conforme AddSessionPayload
       const payload: AddSessionPayload = {
         client_ids: selectedClients.map(c => c.id),
-        start_time: `${date}T${startTime}:00Z`, // ajuste conforme necessário
+        start_time: `${date}T${startTime}:00`, // Removido o Z para usar fuso horário local
         duration_min: finalDuration,
         focus_topic: sessionTitle,
         session_notes: notes,
@@ -251,10 +265,20 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
 
       onClose();
       const actionText = mode === 'register' ? 'registrada' : 'agendada';
-      showToast(`Sessão com ${selectedClients.map(c => c.full_name).join(', ')} ${actionText} com sucesso.`, 'success');
+      
+      // Determinar o texto do toast baseado no número de clientes
+      let toastMessage;
+      if (selectedClients.length === 1) {
+        toastMessage = `Sessão de ${selectedClients[0].full_name} ${actionText} com sucesso.`;
+      } else {
+        toastMessage = `Sessão em grupo ${actionText} com sucesso.`;
+      }
+      
+      showToast(toastMessage, 'success');
 
     } catch (error: any) {
       setErrorMessage(error?.body?.message || 'Erro interno do servidor. Tente novamente em alguns instantes.');
+      scrollToTop();
     } finally {
       setIsSubmitting(false);
     }
@@ -294,7 +318,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto modal-content">
             {/* Header */}
             <div className="flex items-center justify-between p-6" style={{ borderBottom: '1px solid #DEE2E6' }}>
               <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>
