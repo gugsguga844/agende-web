@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, FileText, Bold, Italic, List, Clock, User, MapPin, Video, DollarSign, Search, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
 import AddClientModal from './AddClientModal';
 import RichTextEditor from './RichTextEditor';
-import { getClients } from '../lib/api';
-import { addSession } from '../lib/api';
+import { addSession, getClients, updateSession } from '../lib/api';
 import { AddSessionPayload } from '../types/api';
 import { useToast } from './ui/ToastContext';
 
@@ -22,11 +21,35 @@ interface Client {
   updated_at: string;
 }
 
+interface Session {
+  id: number;
+  user_id: number;
+  participants: Array<{
+    id: number;
+    full_name: string;
+    email: string;
+  }>;
+  start_time: string;
+  end_time: string;
+  duration_min: number;
+  focus_topic: string;
+  session_notes: string;
+  type: string;
+  meeting_url?: string;
+  payment_status: string;
+  payment_method?: string;
+  session_status: string;
+  price: number;
+  created_at: string;
+  updated_at: string;
+}
+
 interface AddSessionModalProps {
   isOpen: boolean;
   onClose: () => void;
   clientName?: string; // Optional - when opened from client profile
   mode: 'register' | 'schedule'; // Determines the modal behavior
+  editingSession?: Session; // Optional - when editing an existing session
 }
 
 interface ToastMessage {
@@ -39,7 +62,8 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   isOpen, 
   onClose, 
   clientName,
-  mode = 'register'
+  mode = 'register',
+  editingSession
 }) => {
   const [selectedClients, setSelectedClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState('');
@@ -102,37 +126,74 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   // Initialize form when modal opens
   useEffect(() => {
     if (isOpen) {
-      // Reset form
-      setDate('');
-      setStartTime('');
-      setDuration('50');
-      setCustomDuration('');
-      setIsCustomDuration(false);
-      setSessionTitle('');
-      setSessionType('presencial');
-      setPaymentStatus('pendente');
-      setNotes('');
-      setNotesExpanded(mode === 'register');
-      setErrorMessage('');
-      setIsSubmitting(false);
-      setMeetingLink('');
-      setPaymentMethod('pix');
-      setSessionPrice('');
-      setSessionPriceError('');
-      
-      // Set client if provided
-      if (clientName) {
-        const client = clients.find(c => c.full_name === clientName);
-        if (client) {
-          setSelectedClients([client]);
-          setClientSearch(client.full_name);
-        }
+      if (editingSession) {
+        // Preencher formulário com dados da sessão existente
+        const sessionDate = new Date(editingSession.start_time);
+        const dateString = sessionDate.toISOString().split('T')[0];
+        const timeString = sessionDate.toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false 
+        });
+        
+        setDate(dateString);
+        setStartTime(timeString);
+        setDuration(editingSession.duration_min.toString());
+        setSessionTitle(editingSession.focus_topic);
+        setSessionType(editingSession.type === 'Online' ? 'online' : 'presencial');
+        setPaymentStatus(editingSession.payment_status === 'Paid' ? 'pago' : 'pendente');
+        setNotes(editingSession.session_notes);
+        setNotesExpanded(true); // Sempre expandir para registrar sessão
+        setMeetingLink(editingSession.meeting_url || '');
+        setPaymentMethod(editingSession.payment_method === 'Pix' ? 'pix' : 
+                        editingSession.payment_method === 'Cartão de Crédito' ? 'cartao' : 
+                        editingSession.payment_method === 'Boleto' ? 'boleto' : 
+                        editingSession.payment_method === 'Dinheiro' ? 'dinheiro' : 'outro');
+        setSessionPrice((editingSession.price * 100).toString()); // Converter para centavos
+        
+        // Preencher clientes selecionados
+        setSelectedClients(editingSession.participants.map(p => ({
+          id: p.id,
+          user_id: 0, // Valor padrão
+          full_name: p.full_name,
+          email: p.email,
+          status: 'Active' as const,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })));
       } else {
-        setSelectedClients([]);
-        setClientSearch('');
+        // Reset form para nova sessão
+        setDate('');
+        setStartTime('07:00'); // Horário padrão 07:00
+        setDuration('50');
+        setCustomDuration('');
+        setIsCustomDuration(false);
+        setSessionTitle('');
+        setSessionType('presencial');
+        setPaymentStatus('pendente');
+        setNotes('');
+        setNotesExpanded(mode === 'register');
+        setErrorMessage('');
+        setIsSubmitting(false);
+        setMeetingLink('');
+        setPaymentMethod('pix');
+        setSessionPrice('');
+        setSessionPriceError('');
+        
+        // Set client if provided
+        if (clientName) {
+          const client = clients.find(c => c.full_name === clientName);
+          if (client) {
+            setSelectedClients([client]);
+            setClientSearch(client.full_name);
+          }
+        } else {
+          setSelectedClients([]);
+          setClientSearch('');
+        }
       }
     }
-  }, [isOpen, clientName, mode]);
+  }, [isOpen, clientName, mode, editingSession]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -235,20 +296,25 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
         return;
       }
 
-      // Check for time conflicts
-      const hasConflict = checkTimeConflict(date, startTime, finalDuration);
-
-      if (hasConflict) {
-        setErrorMessage('Conflito de horário detectado. Este período já está ocupado por outra sessão.');
-        scrollToTop();
-        setIsSubmitting(false);
-        return;
+      // Check for time conflicts (apenas para novas sessões)
+      if (!editingSession) {
+        const hasConflict = checkTimeConflict(date, startTime, finalDuration);
+        if (hasConflict) {
+          setErrorMessage('Conflito de horário detectado. Este período já está ocupado por outra sessão.');
+          scrollToTop();
+          setIsSubmitting(false);
+          return;
+        }
       }
+
+      // Converter horário local para UTC antes de enviar
+      const localDateTime = new Date(`${date}T${startTime}:00`);
+      const utcDateTime = localDateTime.toISOString();
 
       // Montar payload conforme AddSessionPayload
       const payload: AddSessionPayload = {
         client_ids: selectedClients.map(c => c.id),
-        start_time: `${date}T${startTime}:00`, // Removido o Z para usar fuso horário local
+        start_time: utcDateTime, // Horário convertido para UTC
         duration_min: finalDuration,
         focus_topic: sessionTitle,
         session_notes: notes,
@@ -260,11 +326,18 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
         session_status: mode === 'register' ? 'Completed' : 'Scheduled',
       };
 
-      console.log('Payload enviado para addSession:', payload);
-      await addSession(payload);
+      console.log('Payload enviado:', editingSession ? 'para updateSession' : 'para addSession', payload);
+      
+      if (editingSession) {
+        // Atualizar sessão existente
+        await updateSession(editingSession.id.toString(), payload);
+      } else {
+        // Criar nova sessão
+        await addSession(payload);
+      }
 
       onClose();
-      const actionText = mode === 'register' ? 'registrada' : 'agendada';
+      const actionText = editingSession ? 'atualizada' : (mode === 'register' ? 'registrada' : 'agendada');
       
       // Determinar o texto do toast baseado no número de clientes
       let toastMessage;
@@ -292,6 +365,9 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   };
 
   const getModalTitle = () => {
+    if (editingSession) {
+      return 'Registrar Sessão';
+    }
     if (mode === 'register' && clientName) {
       return `Registrar Sessão para ${clientName}`;
     }
@@ -484,29 +560,27 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                   <label htmlFor="date" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
                     Data da Sessão
                   </label>
-                  <div className="relative">
-                    <Calendar size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#6C757D' }} />
-                    <input
-                      id="date"
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-lg transition-colors"
-                      style={{ 
-                        border: '1px solid #DEE2E6',
-                        color: '#343A40'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#347474';
-                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#DEE2E6';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      required
-                    />
-                  </div>
+                  <input
+                    id="date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    disabled={!!editingSession}
+                    required
+                  />
                 </div>
 
                 {/* Start Time */}
@@ -514,29 +588,27 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                   <label htmlFor="startTime" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
                     Hora de Início
                   </label>
-                  <div className="relative">
-                    <Clock size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: '#6C757D' }} />
-                    <input
-                      id="startTime"
-                      type="time"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-lg transition-colors"
-                      style={{ 
-                        border: '1px solid #DEE2E6',
-                        color: '#343A40'
-                      }}
-                      onFocus={(e) => {
-                        e.target.style.borderColor = '#347474';
-                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                      }}
-                      onBlur={(e) => {
-                        e.target.style.borderColor = '#DEE2E6';
-                        e.target.style.boxShadow = 'none';
-                      }}
-                      required
-                    />
-                  </div>
+                  <input
+                    id="startTime"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg transition-colors"
+                    style={{ 
+                      border: '1px solid #DEE2E6',
+                      color: '#343A40'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#347474';
+                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#DEE2E6';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                    disabled={!!editingSession}
+                    required
+                  />
                 </div>
 
                 {/* Duration */}
@@ -891,7 +963,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                   {isSubmitting && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   )}
-                  <span>{isSubmitting ? 'Salvando...' : (mode === 'register' ? 'Salvar Sessão' : 'Agendar Sessão')}</span>
+                  <span>{isSubmitting ? 'Salvando...' : (mode === 'register' ? 'Concluir Sessão' : 'Agendar Sessão')}</span>
                 </button>
               </div>
             </form>
