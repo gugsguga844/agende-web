@@ -1,5 +1,5 @@
 import { endpoints } from './endpoints';
-import { RegisterPayload, AddSessionPayload, ClientPayload } from '../types/api';
+import { RegisterPayload, AddSessionPayload, ClientPayload, UpdateSessionPayload } from '../types/api';
 
 const baseUrl = 'https://sessio-api-production.up.railway.app/api';
 
@@ -157,7 +157,7 @@ export async function getSession(id: string) {
   }
 } 
 
-export async function updateSession(id: string, payload: { name: string; description: string; date: string }) {
+export async function updateSession(id: string, payload: UpdateSessionPayload) {
   try {
     const res = await apiPut(endpoints.session.replace(':id', id), payload);
     return res;

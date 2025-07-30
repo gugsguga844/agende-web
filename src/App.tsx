@@ -22,23 +22,23 @@ function App() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
-        {isAuthenticated ? (
-          <MainLayout onLogout={handleLogout} />
+    <div className="min-h-screen" style={{ backgroundColor: '#F8F9FA' }}>
+      {isAuthenticated ? (
+        <MainLayout onLogout={handleLogout} />
+      ) : (
+        currentView === 'login' ? (
+          <LoginPage 
+            onLogin={handleLogin} 
+            onNavigateToRegister={() => setCurrentView('register')}
+          />
         ) : (
-          currentView === 'login' ? (
-            <LoginPage 
-              onLogin={handleLogin} 
-              onNavigateToRegister={() => setCurrentView('register')}
-            />
-          ) : (
-            <RegisterPage 
-              onRegister={handleRegister}
-              onBackToLogin={() => setCurrentView('login')}
-            />
-          )
-        )}
-      </div>
+          <RegisterPage 
+            onRegister={handleRegister}
+            onBackToLogin={() => setCurrentView('login')}
+          />
+        )
+      )}
+    </div>
     </ToastProvider>
   );
 }

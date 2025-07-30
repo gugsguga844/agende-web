@@ -117,7 +117,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
 
     const payload: ClientPayload = {
       full_name: fullName,
-      status,
+        status,
       ...(email && { email }),
       ...(phone && { phone }),
       ...(birthDate && { birth_date: birthDate }),
