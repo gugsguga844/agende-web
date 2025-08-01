@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, User, ChevronRight, TrendingUp, TrendingDown, Users, CreditCard, Calendar, Plus, FileText, MoreHorizontal, Edit, Archive, Trash2, DollarSign } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Users, CreditCard, Calendar, Plus, FileText, Trash2, DollarSign } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
@@ -55,7 +55,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient, onNavigateToH
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
-  const [openClientMenu, setOpenClientMenu] = useState<number | null>(null);
   const [isAddSessionModalOpen, setIsAddSessionModalOpen] = useState(false);
   const [modalClientName, setModalClientName] = useState<string | undefined>(undefined);
   const [modalMode, setModalMode] = useState<'register' | 'schedule'>('register');
@@ -185,60 +184,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient, onNavigateToH
       console.error('Erro ao marcar sessão como completada:', error);
     }
   };
-
-  const recentClients = [
-    {
-      id: 1,
-      name: 'Juliana Costa',
-      email: 'juliana@email.com',
-      lastSession: '2024-01-15',
-      lastSessionFocus: 'Ansiedade Generalizada - CBT',
-      status: 'Ativo'
-    },
-    {
-      id: 2,
-      name: 'Carlos Mendes',
-      email: 'carlos@email.com',
-      lastSession: '2024-01-14',
-      lastSessionFocus: 'Acompanhamento Pós-Trauma',
-      status: 'Ativo'
-    },
-    {
-      id: 3,
-      name: 'Maria Santos',
-      email: 'maria@email.com',
-      lastSession: '2024-01-13',
-      lastSessionFocus: 'Primeira Consulta - Avaliação',
-      status: 'Ativo'
-    }
-  ];
-
-  // const todaySessions = [
-  //   {
-  //     id: 1,
-  //     time: '09:00',
-  //     client: 'Juliana Costa',
-  //     status: 'confirmado'
-  //   },
-  //   {
-  //     id: 2,
-  //     time: '10:30',
-  //     client: 'Carlos Mendes',
-  //     status: 'confirmado'
-  //   },
-  //   {
-  //     id: 3,
-  //     time: '14:00',
-  //     client: 'Maria Santos',
-  //     status: 'pendente'
-  //   },
-  //   {
-  //     id: 4,
-  //     time: '15:30',
-  //     client: 'Pedro Oliveira',
-  //     status: 'confirmado'
-  //   }
-  // ];
 
   // Sample data for sparkline (last 7 days)
   const weeklySessionsData = [8, 12, 10, 15, 11, 14, 16];
