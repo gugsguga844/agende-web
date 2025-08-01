@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Edit, X, Save, Camera, CheckCircle, AlertCircle, User, Mail, Phone, MapPin, Award, FileText, CreditCard } from 'lucide-react';
 import { getUser, updateUser, uploadImage } from '../../lib/api';
+import { UpdateUserPayload } from '../../types/api';
 import ImageCropper from '../ImageCropper';
 
 interface UserProfile {
@@ -20,25 +21,9 @@ interface UserProfile {
   deleted_at?: string;
 }
 
-interface ProfileData {
-  title?: string;
-  name: string;
-  email: string;
-  phone: string;
-  specialty: string;
-  crp: string;
-  address: string;
-  cpf: string;
-  photo: string | null;
-}
-
 interface ProfileSettingsProps {
-  profileData: ProfileData;
-  setProfileData: (data: ProfileData) => void;
   isEditing: boolean;
   setIsEditing: (v: boolean) => void;
-  handleCancel: () => void;
-  handleSave: () => void;
   getInitials: (name: string) => string;
 }
 
@@ -52,12 +37,8 @@ const maskCpf = (cpf: string) => {
 };
 
 const ProfileSettings: React.FC<ProfileSettingsProps> = ({
-  profileData,
-  setProfileData,
   isEditing,
   setIsEditing,
-  handleCancel,
-  handleSave,
   getInitials
 }) => {
   // Toast state
@@ -77,6 +58,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [tempCroppedImage, setTempCroppedImage] = useState<File | null>(null);
 
   // Carregar dados do usuário
   useEffect(() => {
@@ -111,6 +93,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   };
 
   const handleEditCancel = () => {
+    // Limpar a URL de preview e a imagem temporária ao cancelar
+    if (previewImageUrl) {
+      URL.revokeObjectURL(previewImageUrl);
+      setPreviewImageUrl(null);
+    }
+    setTempCroppedImage(null);
     setEditData(userProfile);
     setIsEditing(false);
   };
@@ -121,8 +109,36 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     try {
       setSaving(true);
       
+      // Se houver uma imagem cortada para fazer upload
+      if (tempCroppedImage) {
+        setUploadingImage(true);
+        try {
+          // Fazer upload da imagem para o S3
+          const uploadResponse = await uploadImage(tempCroppedImage);
+          console.log('Upload response:', uploadResponse);
+          
+          // Atualizar a URL da imagem no payload com a URL do S3
+          editData.avatar_url = uploadResponse.url; // Isso será mapeado para image_url no payload
+          
+          // Limpar a imagem temporária após o upload bem-sucedido
+          setTempCroppedImage(null);
+          
+        } catch (error: unknown) {
+          console.error('Erro ao fazer upload da imagem:', error);
+          setToast({ 
+            show: true, 
+            message: 'Erro ao fazer upload da imagem. Por favor, tente novamente.', 
+            type: 'error' 
+          });
+          setUploadingImage(false);
+          return;
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+      
       // Preparar payload para a API
-      const payload = {
+      const payload: UpdateUserPayload = {
         full_name: editData.full_name,
         email: editData.email,
         professional_title: editData.professional_title || '',
@@ -131,7 +147,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
         professional_license: editData.professional_license || '',
         cpf_nif: editData.cpf_nif || '',
         office_address: editData.office_address || '',
-        image_url: editData.avatar_url || undefined,
+        image_url: editData.avatar_url || undefined, // Enviando como image_url para o backend
       };
 
       console.log('Enviando dados para atualização:', payload);
@@ -151,11 +167,13 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
       // Toast de sucesso
       setToast({ show: true, message: 'Perfil atualizado com sucesso!', type: 'success' });
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao atualizar perfil:', err);
       
       // Toast de erro
-      const errorMessage = err.body?.message || err.message || 'Erro ao atualizar perfil';
+      const errorMessage = (err as { body?: { message?: string }, message?: string }).body?.message || 
+                          (err as { message?: string }).message || 
+                          'Erro ao atualizar perfil';
       setToast({ show: true, message: errorMessage, type: 'error' });
     } finally {
       setSaving(false);
@@ -184,39 +202,30 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   };
 
   // Função para quando o crop for completado
-  const handleCropComplete = async (croppedFile: File) => {
+  const handleCropComplete = (croppedFile: File) => {
     try {
-      setUploadingImage(true);
-      console.log('Iniciando upload da imagem cortada:', croppedFile);
-      console.log('Token de autenticação:', localStorage.getItem('token') ? 'Presente' : 'Ausente');
-      
-      // Upload da imagem para o S3
-      const uploadResponse = await uploadImage(croppedFile);
-      console.log('Upload response:', uploadResponse);
-      
-      // Criar URL de preview
+      // Criar URL de preview local
       const previewUrl = URL.createObjectURL(croppedFile);
       setPreviewImageUrl(previewUrl);
       
-      // Atualizar dados de edição com a nova URL da imagem
+      // Salvar o arquivo cortado para upload posterior
+      setTempCroppedImage(croppedFile);
+      
+      // Atualizar dados de edição com a URL de preview local
       if (editData) {
         setEditData({
           ...editData,
-          avatar_url: uploadResponse.url
+          avatar_url: previewUrl // Usamos a URL local temporária
         });
       }
       
-      setToast({ show: true, message: 'Imagem carregada com sucesso!', type: 'success' });
-      
-    } catch (error: any) {
-      console.error('Erro ao fazer upload da imagem:', error);
+    } catch (error: unknown) {
+      console.error('Erro ao processar a imagem:', error);
       setToast({ 
         show: true, 
-        message: error.message || 'Erro ao fazer upload da imagem.', 
+        message: 'Erro ao processar a imagem.', 
         type: 'error' 
       });
-    } finally {
-      setUploadingImage(false);
     }
   };
 

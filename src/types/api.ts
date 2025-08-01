@@ -19,7 +19,7 @@ export interface UpdateUserPayload {
   professional_license: string;
   cpf_nif: string;
   office_address: string;
-  image_url?: string;
+  image_url?: string;  // O backend espera image_url e fará o mapeamento para avatar_url
 }
 
 export interface ClientPayload {
