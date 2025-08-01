@@ -10,6 +10,18 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface UpdateUserPayload {
+  full_name: string;
+  email: string;
+  professional_title: string;
+  phone: string;
+  specialty: string;
+  professional_license: string;
+  cpf_nif: string;
+  office_address: string;
+  image_url?: string;
+}
+
 export interface ClientPayload {
   full_name: string;
   email?: string;

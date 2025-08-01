@@ -1,5 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, X, Save, Camera, CheckCircle, AlertCircle } from 'lucide-react';
+import { Edit, X, Save, Camera, CheckCircle, AlertCircle, User, Mail, Phone, MapPin, Award, FileText, CreditCard } from 'lucide-react';
+import { getUser, updateUser, uploadImage } from '../../lib/api';
+import ImageCropper from '../ImageCropper';
+
+interface UserProfile {
+  id: number;
+  full_name: string;
+  professional_title?: string;
+  email: string;
+  phone?: string;
+  avatar_url?: string;
+  specialty?: string;
+  professional_license?: string;
+  cpf_nif?: string;
+  office_address?: string;
+  email_verified_at?: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+}
 
 interface ProfileData {
   title?: string;
@@ -21,7 +40,6 @@ interface ProfileSettingsProps {
   handleCancel: () => void;
   handleSave: () => void;
   getInitials: (name: string) => string;
-  handlePhotoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const maskCpf = (cpf: string) => {
@@ -40,11 +58,167 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   setIsEditing,
   handleCancel,
   handleSave,
-  getInitials,
-  handlePhotoUpload
+  getInitials
 }) => {
   // Toast state
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
+  
+  // User data state
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Edit state
+  const [editData, setEditData] = useState<UserProfile | null>(null);
+  const [saving, setSaving] = useState(false);
+  
+  // Image cropper state
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Carregar dados do usuário
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getUser();
+      console.log('Resposta da API getUser:', response);
+      // Extrair dados do objeto 'data' retornado pela API
+      const userData = response.data || response;
+      console.log('Dados do usuário extraídos:', userData);
+      setUserProfile(userData);
+      setEditData(userData); // Inicializar dados de edição
+    } catch (err) {
+      console.error('Erro ao carregar perfil do usuário:', err);
+      setError('Erro ao carregar dados do perfil');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handlers de edição
+  const handleEditStart = () => {
+    if (userProfile) {
+      setEditData({ ...userProfile });
+      setIsEditing(true);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditData(userProfile);
+    setIsEditing(false);
+  };
+
+  const handleEditSave = async () => {
+    if (!editData) return;
+
+    try {
+      setSaving(true);
+      
+      // Preparar payload para a API
+      const payload = {
+        full_name: editData.full_name,
+        email: editData.email,
+        professional_title: editData.professional_title || '',
+        phone: editData.phone || '',
+        specialty: editData.specialty || '',
+        professional_license: editData.professional_license || '',
+        cpf_nif: editData.cpf_nif || '',
+        office_address: editData.office_address || '',
+        image_url: editData.avatar_url || undefined,
+      };
+
+      console.log('Enviando dados para atualização:', payload);
+      
+      const response = await updateUser(payload);
+      console.log('Resposta da atualização:', response);
+      
+      // Verificar se a resposta da API tem dados válidos
+      const updatedData = response.data || response;
+      const finalData = updatedData && updatedData.full_name ? updatedData : editData;
+      
+      // Atualizar dados locais
+      setUserProfile(finalData);
+      setEditData(finalData);
+      setIsEditing(false);
+      
+      // Toast de sucesso
+      setToast({ show: true, message: 'Perfil atualizado com sucesso!', type: 'success' });
+      
+    } catch (err: any) {
+      console.error('Erro ao atualizar perfil:', err);
+      
+      // Toast de erro
+      const errorMessage = err.body?.message || err.message || 'Erro ao atualizar perfil';
+      setToast({ show: true, message: errorMessage, type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Função para lidar com seleção de arquivo
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar tipo de arquivo
+      if (!file.type.startsWith('image/')) {
+        setToast({ show: true, message: 'Por favor, selecione apenas arquivos de imagem.', type: 'error' });
+        return;
+      }
+      
+      // Validar tamanho (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setToast({ show: true, message: 'A imagem deve ter no máximo 5MB.', type: 'error' });
+        return;
+      }
+      
+      setSelectedImageFile(file);
+      setIsCropperOpen(true);
+    }
+  };
+
+  // Função para quando o crop for completado
+  const handleCropComplete = async (croppedFile: File) => {
+    try {
+      setUploadingImage(true);
+      console.log('Iniciando upload da imagem cortada:', croppedFile);
+      console.log('Token de autenticação:', localStorage.getItem('token') ? 'Presente' : 'Ausente');
+      
+      // Upload da imagem para o S3
+      const uploadResponse = await uploadImage(croppedFile);
+      console.log('Upload response:', uploadResponse);
+      
+      // Criar URL de preview
+      const previewUrl = URL.createObjectURL(croppedFile);
+      setPreviewImageUrl(previewUrl);
+      
+      // Atualizar dados de edição com a nova URL da imagem
+      if (editData) {
+        setEditData({
+          ...editData,
+          avatar_url: uploadResponse.url
+        });
+      }
+      
+      setToast({ show: true, message: 'Imagem carregada com sucesso!', type: 'success' });
+      
+    } catch (error: any) {
+      console.error('Erro ao fazer upload da imagem:', error);
+      setToast({ 
+        show: true, 
+        message: error.message || 'Erro ao fazer upload da imagem.', 
+        type: 'error' 
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // Toast auto-hide
   useEffect(() => {
@@ -54,11 +228,73 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     }
   }, [toast.show]);
 
-  // Handler para salvar com toast
-  const handleSaveWithToast = () => {
-    handleSave();
-    setToast({ show: true, message: 'Perfil atualizado com sucesso!', type: 'success' });
-  };
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-white rounded-xl shadow-sm p-6 animate-pulse" style={{ border: '1px solid #DEE2E6' }}>
+          <div className="flex items-center space-x-6">
+            <div className="w-20 h-20 bg-gray-200 rounded-full"></div>
+            <div className="flex-1">
+              <div className="h-8 bg-gray-200 rounded mb-2"></div>
+              <div className="h-6 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm p-6 animate-pulse" style={{ border: '1px solid #DEE2E6' }}>
+          <div className="h-6 bg-gray-200 rounded mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+            <div className="space-y-4">
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-10 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center space-x-3">
+            <AlertCircle size={24} style={{ color: '#EF4444' }} />
+            <div>
+              <h3 className="font-semibold" style={{ color: '#EF4444' }}>Erro ao carregar perfil</h3>
+              <p className="text-sm" style={{ color: '#6C757D' }}>{error}</p>
+            </div>
+          </div>
+          <button 
+            onClick={loadUserProfile}
+            className="mt-4 text-sm font-medium underline"
+            style={{ color: '#347474' }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile || !editData) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-center space-x-3">
+            <AlertCircle size={24} style={{ color: '#F59E0B' }} />
+            <div>
+              <h3 className="font-semibold" style={{ color: '#F59E0B' }}>Perfil não encontrado</h3>
+              <p className="text-sm" style={{ color: '#6C757D' }}>Não foi possível carregar os dados do perfil.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
   <div className="space-y-8">
@@ -95,20 +331,31 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           <div className="relative group">
             <div 
               className="w-20 h-20 rounded-full flex items-center justify-center text-white text-xl font-bold relative overflow-hidden"
-              style={{ backgroundColor: profileData.photo ? 'transparent' : '#347474' }}
+              style={{ backgroundColor: (isEditing && previewImageUrl) || userProfile?.avatar_url ? 'transparent' : '#347474' }}
             >
-              {profileData.photo ? (
+              {isEditing && previewImageUrl ? (
                 <img 
-                  src={profileData.photo} 
+                  src={previewImageUrl} 
+                  alt="Preview da foto de perfil" 
+                  className="w-full h-full object-cover"
+                />
+              ) : userProfile?.avatar_url ? (
+                <img 
+                  src={userProfile.avatar_url} 
                   alt="Foto de perfil" 
                   className="w-full h-full object-cover"
                 />
               ) : (
-                getInitials(profileData.name)
+                getInitials(userProfile?.full_name || '')
+              )}
+              {uploadingImage && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                </div>
               )}
             </div>
             {/* Overlay de upload */}
-            {isEditing && (
+            {isEditing && !uploadingImage && (
               <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                 <label className="cursor-pointer">
                   <Camera size={20} className="text-white" />
@@ -126,17 +373,17 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           <div>
             <h2 className="text-2xl font-bold mb-1" style={{ color: '#343A40' }}>
                 {/* Exibe título se houver */}
-                {profileData.title ? `${profileData.title} ` : ''}{profileData.name}
+                {userProfile.professional_title ? `${userProfile.professional_title} ` : ''}{userProfile.full_name}
             </h2>
             <p className="text-lg" style={{ color: '#6C757D' }}>
-              {profileData.specialty}
+              {userProfile.specialty || 'Profissional de Saúde'}
             </p>
           </div>
         </div>
         {/* Ação Principal */}
         {!isEditing && (
           <button
-            onClick={() => setIsEditing(true)}
+            onClick={handleEditStart}
             className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white transition-colors"
             style={{ backgroundColor: '#347474' }}
             onMouseEnter={(e) => {
@@ -165,8 +412,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           {isEditing ? (
             <input
               type="email"
-              value={profileData.email}
-              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+              value={editData.email}
+              onChange={(e) => setEditData({ ...editData, email: e.target.value })}
               className="w-full px-3 py-2 rounded-lg transition-colors"
               style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
               onFocus={(e) => {
@@ -179,7 +426,13 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
               }}
             />
           ) : (
-            <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.email}</p>
+            <div className="flex items-center space-x-2 py-2">
+              <Mail size={16} style={{ color: '#6C757D' }} />
+              <p className="font-medium" style={{ color: '#343A40' }}>{userProfile.email}</p>
+              {userProfile.email_verified_at && (
+                <CheckCircle size={16} style={{ color: '#10B981' }} />
+              )}
+            </div>
           )}
         </div>
         <div>
@@ -189,8 +442,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           {isEditing ? (
             <input
               type="tel"
-              value={profileData.phone}
-              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+              value={editData.phone || ''}
+              onChange={(e) => setEditData({ ...editData, phone: e.target.value })}
               className="w-full px-3 py-2 rounded-lg transition-colors"
               style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
               onFocus={(e) => {
@@ -203,7 +456,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
               }}
             />
           ) : (
-            <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.phone}</p>
+            <div className="flex items-center space-x-2 py-2">
+              <Phone size={16} style={{ color: '#6C757D' }} />
+              <p className="font-medium" style={{ color: '#343A40' }}>
+                {userProfile.phone || <span style={{ color: '#6C757D' }}>—</span>}
+              </p>
+            </div>
           )}
         </div>
       </div>
@@ -213,8 +471,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
         </label>
         {isEditing ? (
           <textarea
-            value={profileData.address}
-            onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+            value={editData.office_address || ''}
+            onChange={(e) => setEditData({ ...editData, office_address: e.target.value })}
             rows={3}
             className="w-full px-3 py-2 rounded-lg transition-colors resize-none"
             style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
@@ -228,9 +486,10 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
             }}
           />
         ) : (
-          <div className="rounded-lg p-3" style={{ backgroundColor: '#F8F9FA' }}>
+          <div className="flex items-start space-x-2 py-2">
+            <MapPin size={16} style={{ color: '#6C757D', marginTop: '2px' }} />
             <p className="leading-relaxed" style={{ color: '#6C757D' }}>
-              {profileData.address}
+              {userProfile.office_address || '—'}
             </p>
           </div>
         )}
@@ -249,15 +508,20 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
             {isEditing ? (
               <input
                 type="text"
-                value={profileData.title || ''}
-                onChange={e => setProfileData({ ...profileData, title: e.target.value })}
+                value={editData.professional_title || ''}
+                onChange={(e) => setEditData({ ...editData, professional_title: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg transition-colors"
                 style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
                 placeholder="Ex: Dr., Dra., Psic., ..."
                 maxLength={12}
               />
             ) : (
-              <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.title || <span className="text-[#6C757D]">—</span>}</p>
+              <div className="flex items-center space-x-2 py-2">
+                <User size={16} style={{ color: '#6C757D' }} />
+                <p className="font-medium" style={{ color: '#343A40' }}>
+                  {userProfile.professional_title || <span style={{ color: '#6C757D' }}>—</span>}
+                </p>
+              </div>
             )}
           </div>
         <div>
@@ -267,8 +531,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           {isEditing ? (
             <input
               type="text"
-              value={profileData.specialty}
-              onChange={(e) => setProfileData({ ...profileData, specialty: e.target.value })}
+              value={editData.specialty || ''}
+              onChange={(e) => setEditData({ ...editData, specialty: e.target.value })}
               className="w-full px-3 py-2 rounded-lg transition-colors"
               style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
               onFocus={(e) => {
@@ -281,7 +545,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
               }}
             />
           ) : (
-            <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.specialty}</p>
+            <div className="flex items-center space-x-2 py-2">
+              <Award size={16} style={{ color: '#6C757D' }} />
+              <p className="font-medium" style={{ color: '#343A40' }}>
+                {userProfile.specialty || <span style={{ color: '#6C757D' }}>—</span>}
+              </p>
+            </div>
           )}
         </div>
         </div>
@@ -293,8 +562,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           {isEditing ? (
             <input
               type="text"
-              value={profileData.crp}
-              onChange={(e) => setProfileData({ ...profileData, crp: e.target.value })}
+              value={editData.professional_license || ''}
+              onChange={(e) => setEditData({ ...editData, professional_license: e.target.value })}
               className="w-full px-3 py-2 rounded-lg transition-colors"
               style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
               onFocus={(e) => {
@@ -307,7 +576,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
               }}
             />
           ) : (
-            <p className="py-2 font-medium" style={{ color: '#343A40' }}>{profileData.crp}</p>
+            <div className="flex items-center space-x-2 py-2">
+              <FileText size={16} style={{ color: '#6C757D' }} />
+              <p className="font-medium" style={{ color: '#343A40' }}>
+                {userProfile.professional_license || <span style={{ color: '#6C757D' }}>—</span>}
+              </p>
+            </div>
           )}
       </div>
       <div>
@@ -317,8 +591,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
         {isEditing ? (
           <input
             type="text"
-            value={profileData.cpf}
-            onChange={(e) => setProfileData({ ...profileData, cpf: e.target.value })}
+            value={editData.cpf_nif || ''}
+            onChange={(e) => setEditData({ ...editData, cpf_nif: e.target.value })}
             className="w-full px-3 py-2 rounded-lg transition-colors"
             style={{ border: '1px solid #DEE2E6', color: '#343A40' }}
             onFocus={(e) => {
@@ -332,7 +606,12 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
             placeholder="000.000.000-00"
           />
         ) : (
-              <p className="py-2 font-medium" style={{ color: '#343A40' }}>{maskCpf(profileData.cpf)}</p>
+          <div className="flex items-center space-x-2 py-2">
+            <CreditCard size={16} style={{ color: '#6C757D' }} />
+            <p className="font-medium" style={{ color: '#343A40' }}>
+              {userProfile.cpf_nif ? maskCpf(userProfile.cpf_nif) : <span style={{ color: '#6C757D' }}>—</span>}
+            </p>
+          </div>
         )}
       </div>
     </div>
@@ -340,32 +619,42 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     {isEditing && (
       <div className="flex justify-end space-x-3 pt-4" style={{ borderTop: '1px solid #DEE2E6' }}>
         <button
-          onClick={handleCancel}
+          onClick={handleEditCancel}
+          disabled={saving}
           className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
           style={{ color: '#343A40', border: '1px solid #DEE2E6' }}
           onMouseEnter={(e) => {
+            if (!saving) {
             e.currentTarget.style.backgroundColor = '#F8F9FA';
+            }
           }}
           onMouseLeave={(e) => {
+            if (!saving) {
             e.currentTarget.style.backgroundColor = '#FFFFFF';
+            }
           }}
         >
           <X size={16} />
           <span>Cancelar</span>
         </button>
         <button
-              onClick={handleSaveWithToast}
+          onClick={handleEditSave}
+          disabled={saving}
           className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white transition-colors"
-          style={{ backgroundColor: '#347474' }}
+          style={{ backgroundColor: saving ? '#6C757D' : '#347474' }}
           onMouseEnter={(e) => {
+            if (!saving) {
             e.currentTarget.style.backgroundColor = '#2d6363';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#347474';
+            if (!saving) {
+              e.currentTarget.style.backgroundColor = saving ? '#6C757D' : '#347474';
+            }
           }}
         >
           <Save size={16} />
-          <span>Salvar</span>
+          <span>{saving ? 'Salvando...' : 'Salvar'}</span>
         </button>
       </div>
     )}
@@ -383,6 +672,17 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           }
         }
       `}</style>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        isOpen={isCropperOpen}
+        onClose={() => {
+          setIsCropperOpen(false);
+          setSelectedImageFile(null);
+        }}
+        onCropComplete={handleCropComplete}
+        imageFile={selectedImageFile}
+      />
   </div>
 );
 };

@@ -97,19 +97,11 @@ const Settings: React.FC = () => {
   };
 
   const getInitials = (name: string) => {
+    if (!name || typeof name !== 'string') return '';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileData({ ...profileData, photo: e.target?.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+
 
   const renderMainGrid = () => (
     <div className="p-8">
@@ -173,7 +165,6 @@ const Settings: React.FC = () => {
             handleCancel={handleCancel}
             handleSave={handleSave}
             getInitials={getInitials}
-            handlePhotoUpload={handlePhotoUpload}
           />
         );
 

@@ -1,5 +1,5 @@
 import { endpoints } from './endpoints';
-import { RegisterPayload, AddSessionPayload, ClientPayload, UpdateSessionPayload } from '../types/api';
+import { RegisterPayload, AddSessionPayload, ClientPayload, UpdateSessionPayload, UpdateUserPayload } from '../types/api';
 
 const baseUrl = 'https://sessio-api-production.up.railway.app/api';
 
@@ -61,6 +61,21 @@ async function apiPut(endpoint: string, data: any, customHeaders: any = {}, skip
   }
 }
 
+export async function apiPatch(endpoint: string, data: any, customHeaders: any = {}, skipAuth = false) {
+  try {
+    const res = await fetch(`${baseUrl}${endpoint}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(customHeaders, skipAuth),
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`Erro: ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
 async function apiDelete(endpoint: string, customHeaders: any = {}, skipAuth = false) {
   try {
     const res = await fetch(`${baseUrl}${endpoint}`, {
@@ -103,6 +118,54 @@ export async function getUser() {
     return res;
   } catch (err) {
     console.error(err);
+    throw err;
+  }
+}
+
+export async function updateUser(payload: UpdateUserPayload) {
+  try {
+    const res = await apiPatch(endpoints.getUser, payload);
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+export async function uploadImage(file: File) {
+  try {
+    console.log('Iniciando upload da imagem:', file.name, file.size, file.type);
+    
+    const formData = new FormData();
+    formData.append('image', file);
+
+    // Para FormData, NÃO incluir Content-Type - deixar o navegador definir
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${baseUrl}${endpoints.uploadImage}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    console.log('Resposta do servidor:', res.status, res.statusText);
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.error('Erro do servidor:', errorData);
+      throw new Error(errorData.message || `Erro: ${res.status} - ${res.statusText}`);
+    }
+
+    const responseData = await res.json();
+    console.log('Upload bem-sucedido:', responseData);
+    return responseData;
+  } catch (err) {
+    console.error('Erro no upload:', err);
     throw err;
   }
 }
@@ -170,6 +233,16 @@ export async function updateSession(id: string, payload: UpdateSessionPayload) {
 export async function deleteSession(id: string) {
   try {
     const res = await apiDelete(endpoints.session.replace(':id', id));
+    return res;
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
+}
+
+export async function getDashboardStatistics() {
+  try {
+    const res = await apiGet(endpoints.dashboardStats);
     return res;
   } catch (err) {
     console.error(err);

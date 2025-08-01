@@ -163,35 +163,35 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
         })));
       } else {
         // Reset form para nova sessão
-        setDate('');
+      setDate('');
         setStartTime('07:00'); // Horário padrão 07:00
-        setDuration('50');
-        setCustomDuration('');
-        setIsCustomDuration(false);
-        setSessionTitle('');
-        setSessionType('presencial');
-        setPaymentStatus('pendente');
-        setNotes('');
-        setNotesExpanded(mode === 'register');
-        setErrorMessage('');
-        setIsSubmitting(false);
-        setMeetingLink('');
-        setPaymentMethod('pix');
-        setSessionPrice('');
-        setSessionPriceError('');
-        
-        // Set client if provided
-        if (clientName) {
+      setDuration('50');
+      setCustomDuration('');
+      setIsCustomDuration(false);
+      setSessionTitle('');
+      setSessionType('presencial');
+      setPaymentStatus('pendente');
+      setNotes('');
+      setNotesExpanded(mode === 'register');
+      setErrorMessage('');
+      setIsSubmitting(false);
+      setMeetingLink('');
+      setPaymentMethod('pix');
+      setSessionPrice('');
+      setSessionPriceError('');
+      
+      // Set client if provided
+      if (clientName) {
           const client = clients.find(c => c.full_name === clientName);
-          if (client) {
-            setSelectedClients([client]);
+        if (client) {
+          setSelectedClients([client]);
             setClientSearch(client.full_name);
-          }
-        } else {
-          setSelectedClients([]);
-          setClientSearch('');
         }
+      } else {
+        setSelectedClients([]);
+        setClientSearch('');
       }
+    }
     }
   }, [isOpen, clientName, mode, editingSession]);
 
@@ -274,11 +274,11 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
     setIsSubmitting(true);
     setErrorMessage('');
     setSessionPriceError('');
-
+    
     try {
       // Get final duration value
       const finalDuration = isCustomDuration ? parseInt(customDuration) : parseInt(duration);
-
+      
       // Validate custom duration
       if (isCustomDuration && (!customDuration || finalDuration <= 0 || finalDuration > 480)) {
         setErrorMessage('A duração deve ser entre 1 e 480 minutos.');
@@ -298,13 +298,13 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
 
       // Check for time conflicts (apenas para novas sessões)
       if (!editingSession) {
-        const hasConflict = checkTimeConflict(date, startTime, finalDuration);
-        if (hasConflict) {
-          setErrorMessage('Conflito de horário detectado. Este período já está ocupado por outra sessão.');
+      const hasConflict = checkTimeConflict(date, startTime, finalDuration);
+      if (hasConflict) {
+        setErrorMessage('Conflito de horário detectado. Este período já está ocupado por outra sessão.');
           scrollToTop();
-          setIsSubmitting(false);
-          return;
-        }
+        setIsSubmitting(false);
+        return;
+      }
       }
 
       // Converter horário local para UTC antes de enviar
@@ -325,7 +325,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
         price: priceNumber,
         session_status: mode === 'register' ? 'Completed' : 'Scheduled',
       };
-
+      
       console.log('Payload enviado:', editingSession ? 'para updateSession' : 'para addSession', payload);
       
       if (editingSession) {
@@ -348,7 +348,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       }
       
       showToast(toastMessage, 'success');
-
+      
     } catch (error: any) {
       setErrorMessage(error?.body?.message || 'Erro interno do servidor. Tente novamente em alguns instantes.');
       scrollToTop();
@@ -560,27 +560,27 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                   <label htmlFor="date" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
                     Data da Sessão
                   </label>
-                  <input
-                    id="date"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
+                    <input
+                      id="date"
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg transition-colors"
-                    style={{ 
-                      border: '1px solid #DEE2E6',
-                      color: '#343A40'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#347474';
-                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#DEE2E6';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                      style={{ 
+                        border: '1px solid #DEE2E6',
+                        color: '#343A40'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#347474';
+                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#DEE2E6';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     disabled={!!editingSession}
-                    required
-                  />
+                      required
+                    />
                 </div>
 
                 {/* Start Time */}
@@ -588,27 +588,27 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                   <label htmlFor="startTime" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
                     Hora de Início
                   </label>
-                  <input
-                    id="startTime"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    <input
+                      id="startTime"
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg transition-colors"
-                    style={{ 
-                      border: '1px solid #DEE2E6',
-                      color: '#343A40'
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = '#347474';
-                      e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '#DEE2E6';
-                      e.target.style.boxShadow = 'none';
-                    }}
+                      style={{ 
+                        border: '1px solid #DEE2E6',
+                        color: '#343A40'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#347474';
+                        e.target.style.boxShadow = '0 0 0 2px rgba(52, 116, 116, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#DEE2E6';
+                        e.target.style.boxShadow = 'none';
+                      }}
                     disabled={!!editingSession}
-                    required
-                  />
+                      required
+                    />
                 </div>
 
                 {/* Duration */}
