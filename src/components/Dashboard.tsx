@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, TrendingUp, TrendingDown, Users, CreditCard, Calendar, Plus, FileText, Trash2, DollarSign } from 'lucide-react';
+import { Clock, Users, Calendar, Plus, FileText, Trash2, DollarSign } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
+import DashboardCards from './Dashboard/DashboardCards';
 import { Badge } from './ui/badge';
 import AddSessionModal from './AddSessionModal';
 import AddClientModal from './AddClientModal';
-import { getSessions, updateSession } from '../lib/api';
+import { getSessions } from '../lib/api';
 import { getDashboardStatistics } from '../lib/api';
 
 interface DashboardProps {
-  onNavigateToClient: () => void;
   onNavigateToHistory?: () => void;
 }
 
@@ -39,6 +39,7 @@ interface Session {
 interface DashboardStats {
   monthly_revenue: {
     current_value: number;
+    previous_month_value: number;
     comparison_previous_month_percentage: number;
   };
   sessions_today: {
@@ -51,7 +52,7 @@ interface DashboardStats {
   };
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient, onNavigateToHistory }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -85,8 +86,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient, onNavigateToH
       }
       
       setSessions(sessionsArray);
-    } catch (error: any) {
-      console.error('Erro ao carregar sessões:', error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Erro ao carregar sessões:', error.message);
+      } else {
+        console.error('Erro ao carregar sessões:', error);
+      }
       setSessionsError('Erro ao carregar sessões. Tente novamente.');
     } finally {
       setLoadingSessions(false);
@@ -157,62 +162,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient, onNavigateToH
     }
   };
 
-  // Função para marcar sessão como completada
-  const markSessionAsCompleted = async (session: Session) => {
-    try {
-      const updatePayload = {
-        client_ids: session.participants.map(p => p.id),
-        start_time: session.start_time,
-        duration_min: session.duration_min,
-        focus_topic: session.focus_topic,
-        session_notes: session.session_notes,
-        type: session.type,
-        meeting_url: session.meeting_url,
-        payment_status: session.payment_status,
-        payment_method: session.payment_method,
-        price: session.price,
-        session_status: 'Completed' // Marcar como completada
-      };
+  // (Removido: markSessionAsCompleted não é utilizada)
 
-      await updateSession(session.id.toString(), updatePayload);
-      
-      // Recarregar sessões para atualizar a lista
-      await loadSessions();
-      
-      console.log(`Sessão ${session.id} marcada como completada`);
-    } catch (error) {
-      console.error('Erro ao marcar sessão como completada:', error);
-    }
-  };
-
-  // Sample data for sparkline (last 7 days)
-  const weeklySessionsData = [8, 12, 10, 15, 11, 14, 16];
-  const maxSessions = Math.max(...weeklySessionsData);
-
-  // Generate SVG path for sparkline
-  const generateSparklinePath = (data: number[]) => {
-    const width = 60;
-    const height = 20;
-    const points = data.map((value, index) => {
-      const x = (index / (data.length - 1)) * width;
-      const y = height - (value / maxSessions) * height;
-      return `${x},${y}`;
-    });
-    return `M ${points.join(' L ')}`;
-  };
-
-  // Generate donut chart path
-  const generateDonutPath = (percentage: number) => {
-    const radius = 12;
-    const circumference = 2 * Math.PI * radius;
-    const strokeDasharray = circumference;
-    const strokeDashoffset = circumference - (percentage / 100) * circumference;
-    return { strokeDasharray, strokeDashoffset };
-  };
-
-  // Garante que o valor está entre 0 e 100
-  const activeClientsPercentage = Math.max(0, Math.min(100, 85));
-  const donutProps = generateDonutPath(activeClientsPercentage);
+  // (Removido: weeklySessionsData, maxSessions, generateDonutPath, activeClientsPercentage pois não são utilizados)
 
   // Função para abrir o modal com contexto
   const openAddSessionModal = (clientName?: string, mode: 'register' | 'schedule' = 'register', session?: Session) => {
@@ -235,16 +187,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient, onNavigateToH
     }
   }, [showCreateMenu]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
+  // (Removido: formatCurrency não é utilizada)
 
-  const formatPercentage = (value: number) => {
-    return `${value > 0 ? '+' : ''}${value}%`;
-  };
+  // (Removido: formatPercentage não é utilizada)
 
   if (loading) {
     return (
@@ -350,181 +295,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient, onNavigateToH
           </div>
         </div>
 
-        {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 w-full">
-          {/* Sessões de Hoje */}
-          <div className="flex-1 bg-white p-6 rounded-xl shadow-sm" style={{ border: '1px solid #DEE2E6' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-                  <Calendar size={20} style={{ color: '#10B981' }} />
-                </div>
-                <h3 className="font-semibold" style={{ color: '#343A40' }}>Sessões de Hoje</h3>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              {/* Lado Esquerdo - Total e Copy */}
-              <div className="flex-1">
-                {(() => {
-                  const { completed, total } = dashboardStats.sessions_today;
-                  
-                  return (
-                    <div>
-                      <p className="text-3xl font-bold mb-1" style={{ color: '#343A40' }}>
-                        {total}
-                      </p>
-                      <p className="text-sm" style={{ color: '#6C757D' }}>
-                        {total === 0 ? 'Nenhuma sessão agendada' :
-                         completed === 0 ? 'Nenhuma concluída' :
-                         completed === 1 ? '1 sessão concluída' :
-                         `${completed} sessões concluídas`}
-                      </p>
-                    </div>
-                  );
-                })()}
-              </div>
-              
-              {/* Lado Direito - Gráfico de Progresso */}
-              <div className="flex items-center">
-                {(() => {
-                  const { completed, total } = dashboardStats.sessions_today;
-                  const progressPercentage = total > 0 ? (completed / total) * 100 : 0;
-                  const isAllCompleted = total > 0 && completed === total;
-                  
-                  return (
-                    <div className="relative">
-                      <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white border-4 relative">
-                        <span className="text-2xl font-bold" style={{ color: '#343A40' }}>
-                          {total}
-                        </span>
-                        {/* Círculo de progresso */}
-                        <svg className="absolute inset-0 w-16 h-16 transform -rotate-90" viewBox="0 0 64 64">
-                          {/* Fundo */}
-                          <circle
-                            cx="32"
-                            cy="32"
-                            r="28"
-                            fill="none"
-                            stroke="#E5E7EB"
-                            strokeWidth="4"
-                          />
-                          {/* Progresso */}
-                          {progressPercentage > 0 && (
-                            <circle
-                              cx="32"
-                              cy="32"
-                              r="28"
-                              fill="none"
-                              stroke={isAllCompleted ? '#10B981' : '#F4A261'}
-                              strokeWidth="4"
-                              strokeDasharray={2 * Math.PI * 28}
-                              strokeDashoffset={2 * Math.PI * 28 - (progressPercentage / 100) * 2 * Math.PI * 28}
-                              strokeLinecap="round"
-                              style={{ transition: 'stroke-dashoffset 0.5s' }}
-                            />
-                          )}
-                        </svg>
-                        {/* Ícone de sucesso quando todas concluídas */}
-                        {isAllCompleted && (
-                          <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
-
-          {/* Faturamento no Mês */}
-          <div className="flex-1 bg-white p-6 rounded-xl shadow-sm" style={{ border: '1px solid #DEE2E6' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)' }}>
-                  <DollarSign size={20} style={{ color: '#3B82F6' }} />
-                </div>
-                <h3 className="font-semibold" style={{ color: '#343A40' }}>Faturamento no Mês</h3>
-              </div>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-bold mb-1" style={{ color: '#343A40' }}>
-                  {formatCurrency(dashboardStats.monthly_revenue.current_value)}
-                </p>
-                <div className="flex items-center space-x-2">
-                  {dashboardStats.monthly_revenue.comparison_previous_month_percentage > 0 ? (
-                    <TrendingUp size={16} style={{ color: '#10B981' }} />
-                  ) : (
-                    <TrendingDown size={16} style={{ color: '#EF4444' }} />
-                  )}
-                  <p className="text-sm" style={{ 
-                    color: dashboardStats.monthly_revenue.comparison_previous_month_percentage > 0 ? '#10B981' : '#EF4444' 
-                  }}>
-                    {formatPercentage(dashboardStats.monthly_revenue.comparison_previous_month_percentage)} vs. mês passado
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end">
-                {/* Gráfico de Barras Comparativo */}
-                <div className="flex items-end space-x-1 mb-2">
-                  {/* Barra do mês anterior */}
-                  <div className="w-3 h-8 bg-gray-200 rounded-sm"></div>
-                  {/* Barra do mês atual */}
-                  <div 
-                    className="w-3 rounded-sm"
-                    style={{ 
-                      height: `${Math.min(32, Math.max(8, 20 + (dashboardStats.monthly_revenue.comparison_previous_month_percentage / 10)))}px`,
-                      backgroundColor: dashboardStats.monthly_revenue.comparison_previous_month_percentage > 0 ? '#3B82F6' : '#EF4444'
-                    }}
-                  ></div>
-                </div>
-                <span className="text-xs" style={{ color: '#6C757D' }}>Comparativo</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Pagamentos Pendentes */}
-          <div className="flex-1 bg-white p-6 rounded-xl shadow-sm" style={{ border: '1px solid #DEE2E6' }}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)' }}>
-                  <CreditCard size={20} style={{ color: '#F59E0B' }} />
-                </div>
-                <h3 className="font-semibold" style={{ color: '#343A40' }}>Pagamentos Pendentes</h3>
-              </div>
-            </div>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-3xl font-bold mb-1" style={{ color: '#343A40' }}>
-                  {dashboardStats.pending_payments.count}
-                </p>
-                <p className="text-sm" style={{ color: '#6C757D' }}>
-                  {formatCurrency(dashboardStats.pending_payments.total_value)} total
-                </p>
-              </div>
-              <div className="flex flex-col items-end">
-                {/* Ícone de Alerta */}
-                <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center mb-1">
-                  {dashboardStats.pending_payments.count > 0 ? (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#F59E0B' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#6C757D' }}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                </div>
-                <span className="text-xs" style={{ color: '#6C757D' }}>
-                  {dashboardStats.pending_payments.count > 0 ? 'Atenção' : 'Em dia'}
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Stat Cards - NOVO COMPONENTE */}
+        <div className="mb-8 w-full">
+          <DashboardCards data={dashboardStats} />
         </div>
 
         {/* Sessões Anteriores */}
@@ -825,19 +598,33 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToClient, onNavigateToH
 
       <AddSessionModal
         isOpen={isAddSessionModalOpen}
-        onClose={() => {
-          setIsAddSessionModalOpen(false);
-          setEditingSession(undefined);
-          // Recarregar sessões quando o modal for fechado (após criar uma nova sessão)
-          loadSessions();
-        }}
+        onClose={() => setIsAddSessionModalOpen(false)}
         clientName={modalClientName}
         mode={modalMode}
         editingSession={editingSession}
+        onSessionSaved={async (newSession) => {
+          console.log('[Dashboard] onSessionSaved recebeu:', newSession);
+          // Atualização otimista: se o modal retornar a nova sessão, adicione imediatamente
+          if (newSession) {
+            setSessions(prev => [newSession, ...prev]);
+          }
+          setLoadingSessions(true);
+          // Pequeno delay para garantir propagação no backend
+          await new Promise(res => setTimeout(res, 300));
+          await loadSessions();
+          await loadDashboardStats();
+          setLoadingSessions(false);
+        }}
       />
       {isAddClientModalOpen && (
-        <AddClientModal isOpen={isAddClientModalOpen} onClose={() => setIsAddClientModalOpen(false)} />
-      )}
+        <AddClientModal 
+        isOpen={isAddClientModalOpen}
+        onClose={() => setIsAddClientModalOpen(false)}
+        onClientSaved={() => {
+          loadSessions();
+          loadDashboardStats();
+        }}
+      />)}
       </div>
     );
   };

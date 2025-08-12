@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, FileText, Bold, Italic, List, Clock, User, MapPin, Video, DollarSign, Search, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, User, MapPin, Video, DollarSign, ChevronDown, CheckCircle, AlertCircle } from 'lucide-react';
 import AddClientModal from './AddClientModal';
 import RichTextEditor from './RichTextEditor';
 import { addSession, getClients, updateSession } from '../lib/api';
@@ -50,6 +50,7 @@ interface AddSessionModalProps {
   clientName?: string; // Optional - when opened from client profile
   mode: 'register' | 'schedule'; // Determines the modal behavior
   editingSession?: Session; // Optional - when editing an existing session
+  onSessionSaved?: (session?: Session) => void; // Callback para atualizar dashboard
 }
 
 interface ToastMessage {
@@ -63,8 +64,10 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   onClose, 
   clientName,
   mode = 'register',
-  editingSession
+  editingSession,
+  onSessionSaved
 }) => {
+  console.log('[AddSessionModal] props.onSessionSaved:', onSessionSaved);
   const [selectedClients, setSelectedClients] = useState<Client[]>([]);
   const [clientSearch, setClientSearch] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
@@ -336,6 +339,28 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
         await addSession(payload);
       }
 
+      // Se possível, retorne a sessão recém criada/editada para atualização otimista
+      let returnedSession: Session | undefined = undefined;
+      if (editingSession) {
+        // Atualização: recupere a sessão editada (idealmente da API, mas aqui retornamos o payload)
+        returnedSession = { ...editingSession, ...payload };
+      } else {
+        // Nova sessão: recupere a resposta da API se possível, senão retorne o payload
+        // Ideal: const created = await addSession(payload); returnedSession = created;
+        // Aqui, como addSession não retorna, simulamos:
+        returnedSession = {
+          ...payload,
+          id: Date.now(),
+          user_id: 0,
+          participants: selectedClients,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          end_time: payload.end_time || payload.start_time, // fallback se não houver
+          meeting_url: payload.meeting_url || '',
+        };
+      }
+      console.log('[AddSessionModal] onSessionSaved será chamado com:', returnedSession);
+      if (typeof onSessionSaved === 'function') onSessionSaved(returnedSession);
       onClose();
       const actionText = editingSession ? 'atualizada' : (mode === 'register' ? 'registrada' : 'agendada');
       

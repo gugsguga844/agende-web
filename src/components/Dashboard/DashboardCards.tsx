@@ -6,6 +6,7 @@ import { Calendar, DollarSign, AlertCircle, CheckCircle2 } from "lucide-react"
 interface DashboardData {
   monthly_revenue: {
     current_value: number
+    previous_month_value: number
     comparison_previous_month_percentage: number
   }
   sessions_today: {
@@ -41,7 +42,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {/* Card 1: Sessões de Hoje */}
-      <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden">
+      <Card className="bg-white shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -66,7 +67,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
                 >
                   {data.sessions_today.completed === data.sessions_today.total && data.sessions_today.total > 0
                     ? "✓ Completas"
-                    : `${data.sessions_today.completed} de ${data.sessions_today.total}`}
+                    : `${data.sessions_today.completed} de ${data.sessions_today.total} completadas`}
                 </div>
               </div>
             </div>
@@ -112,7 +113,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
       </Card>
 
       {/* Card 2: Faturamento no Mês */}
-      <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden">
+      <Card className="bg-white shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -142,43 +143,106 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
               </div>
             </div>
 
-            {/* Sparkline com área preenchida */}
-            <div className="w-20 h-10">
-              <svg className="w-full h-full" viewBox="0 0 80 40" preserveAspectRatio="none">
+            {/* Sparkline dinâmico baseado na comparação */}
+            <div className="w-20 h-10 relative group">
+              <svg className="w-full h-full cursor-pointer" viewBox="0 0 80 40" preserveAspectRatio="none">
                 {/* Definir gradiente para área preenchida */}
                 <defs>
                   <linearGradient id="sparklineAreaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#7C3AED" stopOpacity="0.05" />
+                    <stop offset="0%" stopColor="#347474" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#347474" stopOpacity="0.05" />
+                  </linearGradient>
+                  <linearGradient id="sparklineAreaGradientNegative" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#EF4444" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#EF4444" stopOpacity="0.05" />
                   </linearGradient>
                 </defs>
 
-                {/* Área preenchida */}
-                <path
-                  d="M0,30 L13,25 L26,28 L39,20 L52,16 L65,12 L80,8 L80,40 L0,40 Z"
-                  fill="url(#sparklineAreaGradient)"
-                />
-
-                {/* Linha do sparkline */}
-                <path
-                  d="M0,30 L13,25 L26,28 L39,20 L52,16 L65,12 L80,8"
-                  fill="none"
-                  stroke="#7C3AED"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-
-                {/* Ponto destacado no final */}
-                <circle cx="80" cy="8" r="2.5" fill="#7C3AED" />
-              </svg>
-            </div>
+                {/* Gerar dados do sparkline baseado na comparação */}
+                {(() => {
+                  const isPositive = data.monthly_revenue.comparison_previous_month_percentage >= 0;
+                  const percentage = Math.abs(data.monthly_revenue.comparison_previous_month_percentage);
+                  
+                  // Gerar pontos do sparkline baseado na porcentagem
+                  const points = [];
+                  const numPoints = 8;
+                  
+                  for (let i = 0; i < numPoints; i++) {
+                    const x = (i / (numPoints - 1)) * 80;
+                    let y;
+                    
+                    if (isPositive) {
+                      // Linha crescente para valores positivos
+                      y = 40 - (i / (numPoints - 1)) * 25 - (percentage / 100) * 10;
+                    } else {
+                      // Linha decrescente para valores negativos
+                      y = 15 + (i / (numPoints - 1)) * 20 + (percentage / 100) * 5;
+                    }
+                    
+                    points.push(`${x},${y}`);
+                  }
+                  
+                  const pathData = `M ${points.join(' L ')}`;
+                  const areaPathData = `${pathData} L 80,40 L 0,40 Z`;
+                  
+                  return (
+                    <>
+                      {/* Área preenchida */}
+                      <path
+                        d={areaPathData}
+                        fill={isPositive ? "url(#sparklineAreaGradient)" : "url(#sparklineAreaGradientNegative)"}
+                      />
+                      
+                      {/* Linha do sparkline */}
+                      <path
+                        d={pathData}
+                        fill="none"
+                        stroke={isPositive ? "#347474" : "#EF4444"}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="group-hover:stroke-width-3 transition-all duration-200"
+                      />
+                      
+                      {/* Ponto destacado no final */}
+                      <circle 
+                        cx="80" 
+                        cy={isPositive ? "5" : "35"} 
+                        r="2.5" 
+                        fill={isPositive ? "#347474" : "#EF4444"} 
+                        className="group-hover:r-3 transition-all duration-200"
+                      />
+                    </>
+                  );
+                })()}
+                              </svg>
+                
+                {/* Tooltip no hover */}
+                <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-10 shadow-lg">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <div className={`w-2 h-2 rounded-full ${data.monthly_revenue.comparison_previous_month_percentage >= 0 ? 'bg-green-400' : 'bg-red-400'}`}></div>
+                    <span className="font-medium">
+                      {data.monthly_revenue.comparison_previous_month_percentage >= 0 ? '+' : ''}
+                      {data.monthly_revenue.comparison_previous_month_percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="text-gray-300 text-xs mb-1">
+                    vs. mês anterior
+                  </div>
+                  <div className="text-gray-300 text-xs">
+                    Mês anterior: {formatCurrency(data.monthly_revenue.previous_month_value)}
+                  </div>
+                  
+                  {/* Seta do tooltip */}
+                  <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                </div>
+              </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Card 3: Pagamentos Pendentes */}
-      <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-all duration-300 rounded-2xl overflow-hidden">
+      <Card className="bg-white shadow-sm hover:shadow-md transition-all duration-300 rounded-xl overflow-hidden" style={{ border: '1px solid #DEE2E6' }}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -223,9 +287,11 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
 
 // Exemplo de uso:
 export function ExampleUsage() {
-  const exampleData: DashboardData = {
+  // Exemplo com crescimento positivo
+  const positiveData: DashboardData = {
     monthly_revenue: {
       current_value: 12450.0,
+      previous_month_value: 10800.0,
       comparison_previous_month_percentage: 15.3,
     },
     sessions_today: {
@@ -238,5 +304,33 @@ export function ExampleUsage() {
     },
   }
 
-  return <DashboardCards data={exampleData} />
+  // Exemplo com queda
+  const negativeData: DashboardData = {
+    monthly_revenue: {
+      current_value: 8500.0,
+      previous_month_value: 9260.0,
+      comparison_previous_month_percentage: -8.2,
+    },
+    sessions_today: {
+      completed: 2,
+      total: 3,
+    },
+    pending_payments: {
+      count: 1,
+      total_value: 150.0,
+    },
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Crescimento Positivo (+15.3%)</h3>
+        <DashboardCards data={positiveData} />
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Queda (-8.2%)</h3>
+        <DashboardCards data={negativeData} />
+      </div>
+    </div>
+  )
 }

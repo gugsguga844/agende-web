@@ -8,6 +8,7 @@ import { useToast } from './ui/ToastContext';
 interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onClientSaved?: () => void; // Callback para atualizar dashboard
 }
 
 interface ToastMessage {
@@ -127,6 +128,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
 
     try {
       await addClient(payload);
+      if (typeof onClientSaved === 'function') onClientSaved();
       onClose();
       showToast(`Cliente "${fullName}" adicionado com sucesso.`, 'success');
     } catch (error) {

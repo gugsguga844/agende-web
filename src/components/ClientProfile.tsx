@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit, Phone, Mail, User, Plus, Calendar, FileText, ChevronDown, Archive, DollarSign, Save, X } from 'lucide-react';
+import { Edit, Phone, Mail, User, Calendar, FileText, ChevronDown, Archive, DollarSign, Save, X } from 'lucide-react';
 import AddSessionModal from './AddSessionModal';
 
 const ClientProfile: React.FC = () => {
