@@ -8,7 +8,7 @@ import { useToast } from './ui/ToastContext';
 interface AddClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onClientSaved?: () => void; // Callback para atualizar dashboard
+  onClientSaved?: (newClientName: string) => void; // Callback para atualizar lista no pai
 }
 
 interface ToastMessage {
@@ -17,7 +17,7 @@ interface ToastMessage {
   show: boolean;
 }
 
-const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
+const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose, onClientSaved }) => {
   // Form state
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -128,7 +128,7 @@ const AddClientModal: React.FC<AddClientModalProps> = ({ isOpen, onClose }) => {
 
     try {
       await addClient(payload);
-      if (typeof onClientSaved === 'function') onClientSaved();
+      if (typeof onClientSaved === 'function') onClientSaved(fullName);
       onClose();
       showToast(`Cliente "${fullName}" adicionado com sucesso.`, 'success');
     } catch (error) {

@@ -303,7 +303,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
         {/* Sessões Anteriores */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>Agendamentos Anteriores</h2>
+            <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>Agendamentos Concluidos</h2>
             <button
               className="text-sm font-medium text-[#347474] hover:underline px-3 py-1 rounded transition-colors"
               onClick={() => {
@@ -531,15 +531,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
                               className="bg-[#347474] hover:bg-[#285d5d] text-white"
                               onClick={() => openAddSessionModal(session.participants[0]?.full_name, 'register', session)}
                             >
-                              Registrar Sessão
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-[#347474] text-[#347474] hover:bg-[#347474] hover:text-white bg-transparent"
-                            >
-                              Ver Prontuário
+                              Marcar como Concluído
                             </Button>
 
                             {/* Menu de Ações Secundárias */}

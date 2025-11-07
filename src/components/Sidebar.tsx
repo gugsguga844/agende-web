@@ -114,12 +114,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) =
                 className={`font-medium ${isCollapsed ? 'text-base' : 'text-sm'}`} 
                 style={{ color: '#6C757D' }}
               >
-                {getInitials('Dr(a). Ana Silva')}
+                {getInitials('N')}
               </span>
             </div>
             {!isCollapsed && (
               <div className="transition-opacity duration-300">
-                <p className="font-medium" style={{ color: '#343A40' }}>Dr(a). Ana Silva</p>
+                <p className="font-medium" style={{ color: '#343A40' }}>Nome</p>
                 <p className="text-sm" style={{ color: '#6C757D' }}>Profissional</p>
               </div>
             )}

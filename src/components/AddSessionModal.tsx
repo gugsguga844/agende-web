@@ -390,6 +390,24 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
     setClientSearch('');
   };
 
+  const handleClientSaved = async (newClientName: string) => {
+    try {
+      const data = await getClients();
+      const list: Client[] = Array.isArray(data) ? data : (data.data || []);
+      setClients(list);
+      const found = list.find(c => c.full_name.toLowerCase() === newClientName.toLowerCase());
+      if (found) {
+        setSelectedClients(prev => (prev.some(x => x.id === found.id) ? prev : [...prev, found]));
+        setClientSearch('');
+        setShowClientDropdown(false);
+      }
+    } catch (e) {
+      // silenciosamente falha; a lista permanecerá como estava
+    } finally {
+      setIsAddClientModalOpen(false);
+    }
+  };
+
   const getModalTitle = () => {
     if (editingSession) {
       return 'Registrar Agendamento';
@@ -1003,6 +1021,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       <AddClientModal 
         isOpen={isAddClientModalOpen}
         onClose={() => setIsAddClientModalOpen(false)}
+        onClientSaved={handleClientSaved}
       />
     </>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Clock, X, Coffee, BookOpen, Users as UsersIcon, Video, MapPin, DollarSign, Trash2, MoreHorizontal, Plus, ChevronDown, Palette, Smile, Settings } from 'lucide-react';
 import AddSessionModal from './AddSessionModal';
+import { getSessions, getSession, updateSession } from '../lib/api';
 
 interface Session {
   id: number;
@@ -88,6 +89,9 @@ const Calendar: React.FC = () => {
   const calendarRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = React.useRef<HTMLDivElement>(null);
 
+  // Data selecionada na visualização diária
+  const [dailyDate, setDailyDate] = useState<Date>(new Date());
+
   // Emojis populares organizados por categoria
   const emojiCategories = {
     'Comida': ['🍽️', '☕', '🥗', '🍕', '🍔', '🥪', '🍜', '🍰'],
@@ -100,88 +104,46 @@ const Calendar: React.FC = () => {
     'Símbolos': ['⭐', '🔥', '💎', '🎉', '🎊', '🌟', '✨', '🎈']
   };
 
-  // Sample data with precise timing
-  const [sessions, setSessions] = useState<Session[]>([
-    {
-      id: 1,
-      day: 'monday',
-      startTime: '09:00',
-      endTime: '09:50',
-      client: 'Juliana Costa',
-      clientEmail: 'juliana@email.com',
-      duration: 50,
-      status: 'confirmado',
-      sessionType: 'presencial',
-      paymentStatus: 'pago',
-      notes: 'Paciente com ansiedade generalizada. Sessão focada em técnicas de respiração.'
-    },
-    {
-      id: 2,
-      day: 'monday',
-      startTime: '10:30',
-      endTime: '11:20',
-      client: 'Carlos Mendes',
-      clientEmail: 'carlos@email.com',
-      duration: 50,
-      status: 'confirmado',
-      sessionType: 'online',
-      paymentStatus: 'pendente',
-      notes: 'Acompanhamento pós-trauma. Trabalhando resiliência emocional.'
-    },
-    {
-      id: 3,
-      day: 'tuesday',
-      startTime: '14:30',
-      endTime: '15:20',
-      client: 'Maria Santos',
-      clientEmail: 'maria@email.com',
-      duration: 50,
-      status: 'pendente',
-      sessionType: 'presencial',
-      paymentStatus: 'pago',
-      notes: 'Primeira sessão - avaliação inicial completa.'
-    },
-    {
-      id: 4,
-      day: 'wednesday',
-      startTime: '09:15',
-      endTime: '10:05',
-      client: 'Pedro Oliveira',
-      clientEmail: 'pedro@email.com',
-      duration: 50,
-      status: 'confirmado',
-      sessionType: 'online',
-      paymentStatus: 'pago',
-      notes: 'Continuidade do tratamento para depressão.'
-    },
-    {
-      id: 8,
-      day: 'friday',
-      startTime: '10:00',
-      endTime: '10:50',
-      client: 'Cliente A',
-      clientEmail: 'clientea@email.com',
-      duration: 50,
-      status: 'cancelado',
-      sessionType: 'presencial',
-      paymentStatus: 'pendente',
-      notes: 'Sessão cancelada para teste.'
-    },
-    {
-      id: 9,
-      day: 'friday',
-      startTime: '10:00',
-      endTime: '10:50',
-      client: 'Cliente B',
-      clientEmail: 'clienteb@email.com',
-      duration: 50,
-      status: 'confirmado',
-      sessionType: 'online',
-      paymentStatus: 'pago',
-      notes: 'Sessão ativa para teste.'
-    }
-    
-  ]);
+  // Sessions carregadas da API
+  const [sessions, setSessions] = useState<Session[]>([]);
+
+  const toDayKey = (date: Date): string => {
+    return ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][date.getDay()];
+  };
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await getSessions();
+        const list = Array.isArray(res) ? res : (res.data || []);
+        const mapped: Session[] = list.map((s: any) => {
+          const start = new Date(s.start_time);
+          const duration = s.duration_min ?? (s.end_time ? Math.max(0, (new Date(s.end_time).getTime() - start.getTime())/60000) : 50);
+          const end = new Date(start.getTime() + duration * 60000);
+          const participants = s.participants || s.clients || [];
+          const clientName = participants.length === 1 ? (participants[0].full_name || participants[0].name || 'Cliente') : `${participants.length} clientes`;
+          return {
+            id: s.id,
+            day: toDayKey(start),
+            startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+            endTime: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
+            client: clientName,
+            clientEmail: participants[0]?.email || '',
+            duration: Math.round(duration),
+            status: (s.session_status === 'Completed' ? 'confirmado' : 'pendente'),
+            sessionType: s.type === 'Online' ? 'online' : 'presencial',
+            paymentStatus: s.payment_status === 'Paid' ? 'pago' : 'pendente',
+            notes: s.session_notes || ''
+          } as Session;
+        });
+        setSessions(mapped);
+      } catch (e) {
+        console.error('[Calendar] Falha ao carregar sessões', e);
+      }
+    })();
+  }, []);
 
   // Bloqueios de tempo com cores personalizadas
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([
@@ -209,16 +171,37 @@ const Calendar: React.FC = () => {
     }
   ]);
 
-  // weekDaysData: Segunda a Domingo
-  const weekDaysData = [
-    { key: 'monday', label: 'Segunda', date: '15/01' },
-    { key: 'tuesday', label: 'Terça', date: '16/01' },
-    { key: 'wednesday', label: 'Quarta', date: '17/01' },
-    { key: 'thursday', label: 'Quinta', date: '18/01' },
-    { key: 'friday', label: 'Sexta', date: '19/01' },
-    { key: 'saturday', label: 'Sábado', date: '20/01' },
-    { key: 'sunday', label: 'Domingo', date: '21/01' }
-  ];
+  // weekDaysData dinâmico: Segunda a Domingo, baseado em currentWeek
+  function getWeekDaysData() {
+    const today = new Date();
+    // Encontrar a segunda-feira da semana atual
+    const temp = new Date(today);
+    const dayOfWeek = (temp.getDay() + 6) % 7; // 0 = segunda
+    temp.setDate(temp.getDate() - dayOfWeek + currentWeek * 7);
+    const labels = {
+      monday: 'Segunda',
+      tuesday: 'Terça',
+      wednesday: 'Quarta',
+      thursday: 'Quinta',
+      friday: 'Sexta',
+      saturday: 'Sábado',
+      sunday: 'Domingo',
+    } as const;
+    const keys = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'] as const;
+    const arr = [] as Array<{ key: string; label: string; date: string; dateObj: Date }>;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(temp);
+      d.setDate(temp.getDate() + i);
+      const key = keys[i];
+      const label = labels[key as keyof typeof labels];
+      const day = d.toLocaleDateString('pt-BR', { day: '2-digit' });
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      arr.push({ key, label, date: `${day}/${month}`, dateObj: d });
+    }
+    return arr;
+  }
+
+  const weekDaysData = React.useMemo(() => getWeekDaysData(), [currentWeek]);
 
   // Função utilitária para obter a ordem correta dos dias
   function getDisplayedDays(weekDays: number) {
@@ -359,15 +342,22 @@ const Calendar: React.FC = () => {
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (dragState.isDragging && calendarRef.current) {
       const rect = calendarRef.current.getBoundingClientRect();
-      const relativeX = e.clientX - rect.left;
       const offsetY = dragState.cardOffsetY ?? 0;
       const relativeY = e.clientY - offsetY - rect.top;
       const timeColumnWidth = 120;
-      const dayWidth = (rect.width - timeColumnWidth) / weekDays;
-      const dayIndex = Math.floor((relativeX - timeColumnWidth) / dayWidth);
-      const newDay = getDisplayedDays(weekDays)[dayIndex]?.key || dragState.originalDay;
       const headerHeight = 80;
       const calendarHeight = 960;
+
+      // Determine day according to view
+      const newDay = (viewMode === 'daily')
+        ? getDayKeyFor(dailyDate)
+        : (() => {
+            const relativeX = e.clientX - rect.left;
+            const dayWidth = (rect.width - timeColumnWidth) / weekDays;
+            const dayIndex = Math.floor((relativeX - timeColumnWidth) / dayWidth);
+            return getDisplayedDays(weekDays)[dayIndex]?.key || dragState.originalDay;
+          })();
+
       const relativeCalendarY = Math.max(0, relativeY - headerHeight);
       const totalDayMinutes = (workingHours.end - workingHours.start) * 60;
       const minutesFromStart = (relativeCalendarY / calendarHeight) * totalDayMinutes;
@@ -381,7 +371,7 @@ const Calendar: React.FC = () => {
         newTime
       }));
     }
-  }, [dragState.isDragging, dragState.originalDay, dragState.cardOffsetY, workingHours.start, workingHours.end, weekDays]);
+  }, [dragState.isDragging, dragState.originalDay, dragState.cardOffsetY, workingHours.start, workingHours.end, weekDays, viewMode, dailyDate]);
 
   const handleMouseUp = useCallback(() => {
     if (dragState.isDragging) {
@@ -491,22 +481,53 @@ const Calendar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [actionMenuSessionId, actionMenuBlockId, showCreateMenu, showEmojiPicker, showViewOptions]);
 
-  const confirmReschedule = () => {
+  const confirmReschedule = async () => {
     if (dragState.itemId && dragState.itemType) {
       if (dragState.itemType === 'session') {
-        setSessions(prev => prev.map(session => {
-          if (session.id === dragState.itemId) {
-            const startMinutes = timeToMinutes(dragState.newTime);
-            const endMinutes = startMinutes + session.duration;
-            return {
-              ...session,
-              day: dragState.newDay,
-              startTime: dragState.newTime,
-              endTime: minutesToTime(endMinutes)
-            };
-          }
-          return session;
-        }));
+        try {
+          const sessionId = String(dragState.itemId);
+          const s = await getSession(sessionId);
+          const data = (s?.data ?? s) as any;
+          // Construir nova data/hora (Diário: dailyDate + newTime; Semanal/Mensal: mantém dia calculado)
+          const baseDate = (viewMode === 'daily') ? dailyDate : new Date();
+          const yyyy = baseDate.getFullYear();
+          const mm = (baseDate.getMonth() + 1).toString().padStart(2, '0');
+          const dd = baseDate.getDate().toString().padStart(2, '0');
+          const newLocalISO = new Date(`${yyyy}-${mm}-${dd}T${dragState.newTime}:00`).toISOString();
+
+          const participants = data.participants || data.clients || [];
+          const payload = {
+            client_ids: participants.map((p: any) => p.id).filter((id: any) => typeof id === 'number'),
+            start_time: newLocalISO,
+            duration_min: data.duration_min ?? (data.end_time ? Math.max(0, (new Date(data.end_time).getTime() - new Date(data.start_time).getTime())/60000) : 50),
+            focus_topic: data.focus_topic || '',
+            session_notes: data.session_notes || '',
+            type: data.type || 'In-person',
+            meeting_url: data.meeting_url || undefined,
+            payment_status: data.payment_status || 'Pending',
+            payment_method: data.payment_method || undefined,
+            price: typeof data.price === 'number' ? data.price : 0,
+            session_status: data.session_status || 'Scheduled',
+          };
+
+          await updateSession(sessionId, payload);
+
+          setSessions(prev => prev.map(session => {
+            if (session.id === dragState.itemId) {
+              const startMinutes = timeToMinutes(dragState.newTime);
+              const endMinutes = startMinutes + session.duration;
+              return {
+                ...session,
+                day: dragState.newDay,
+                startTime: dragState.newTime,
+                endTime: minutesToTime(endMinutes)
+              };
+            }
+            return session;
+          }));
+        } catch (e) {
+          console.error('[Calendar] Falha ao reagendar sessão', e);
+        }
       } else if (dragState.itemType === 'block') {
         setTimeBlocks(prev => prev.map(block => {
           if (block.id === dragState.itemId) {
@@ -629,7 +650,8 @@ const Calendar: React.FC = () => {
 
   const getWeekRangeText = () => {
     const firstDay = weekDaysData[0];
-    const lastDay = weekDaysData[weekDays - 1];
+    const lastIndex = weekDays === 5 ? 4 : 6;
+    const lastDay = weekDaysData[lastIndex];
     return `${firstDay.date} - ${lastDay.date}`;
   };
 
@@ -645,6 +667,10 @@ const Calendar: React.FC = () => {
     return ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][today.getDay()];
   }
 
+  function getDayKeyFor(date: Date) {
+    return ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+  }
+
   // 1. Cabeçalho dinâmico
   // Substituir o texto do cabeçalho por:
   const getHeaderText = () => {
@@ -652,22 +678,31 @@ const Calendar: React.FC = () => {
       const now = new Date();
       const month = new Date(now.getFullYear(), now.getMonth() + currentWeek, 1);
       return `${month.toLocaleString('pt-BR', { month: 'long' }).replace(/^./, str => str.toUpperCase())} ${month.getFullYear()}`;
+    } else if (viewMode === 'daily') {
+      const day = dailyDate.toLocaleDateString('pt-BR', { day: '2-digit' });
+      const monthName = dailyDate.toLocaleString('pt-BR', { month: 'long' }).replace(/^./, str => str.toUpperCase());
+      const year = dailyDate.getFullYear();
+      return `${day} ${monthName} ${year}`;
     } else {
-      return getWeekRangeText() + ' Janeiro 2024';
+      return getWeekRangeText();
     }
   };
 
   // 2. Navegação por mês na visualização mensal
   const handlePrev = () => {
-    if (viewMode === 'monthly') {
-      setCurrentWeek(currentWeek - 1);
+    if (viewMode === 'daily') {
+      const d = new Date(dailyDate);
+      d.setDate(d.getDate() - 1);
+      setDailyDate(d);
     } else {
       setCurrentWeek(currentWeek - 1);
     }
   };
   const handleNext = () => {
-    if (viewMode === 'monthly') {
-      setCurrentWeek(currentWeek + 1);
+    if (viewMode === 'daily') {
+      const d = new Date(dailyDate);
+      d.setDate(d.getDate() + 1);
+      setDailyDate(d);
     } else {
       setCurrentWeek(currentWeek + 1);
     }
@@ -680,8 +715,9 @@ const Calendar: React.FC = () => {
 
   // Visualização Diária
   function DailyView() {
-    const todayKey = getTodayKey();
-    const day = weekDaysData.find(d => d.key === todayKey) || weekDaysData[0];
+    const todayKey = getDayKeyFor(dailyDate);
+    const dayLabel = dailyDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+    const dayDate = dailyDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
     return (
       <div className="bg-white rounded-xl shadow-sm overflow-visible" style={{ border: '1px solid #DEE2E6' }}>
         {/* Header do dia */}
@@ -690,8 +726,8 @@ const Calendar: React.FC = () => {
             <span className="text-sm font-medium" style={{ color: '#6C757D' }}>Horário</span>
           </div>
           <div className="p-4 text-center relative" style={{ backgroundColor: '#F8F9FA', color: '#347474' }}>
-            <div className="font-semibold">{day.label}</div>
-            <div className="text-sm" style={{ color: '#347474' }}>{day.date}</div>
+            <div className="font-semibold">{dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1)}</div>
+            <div className="text-sm" style={{ color: '#347474' }}>{dayDate}</div>
           </div>
         </div>
         {/* Time slots e sessões */}
@@ -725,7 +761,7 @@ const Calendar: React.FC = () => {
               {/* Hour lines */}
               {timeSlots.map((time, index) => (
                 <div
-                  key={`${day.key}-${time}`}
+                  key={`${todayKey}-${time}`}
                   className="absolute w-full cursor-pointer hover:bg-gray-50 transition-colors"
                   style={{
                     top: `${(index / timeSlots.length) * 100}%`,
@@ -733,11 +769,11 @@ const Calendar: React.FC = () => {
                     borderBottom: index < timeSlots.length - 1 ? '1px solid #DEE2E6' : 'none',
                     backgroundColor: !isWorkingHour(time) ? '#FAFBFC' : 'transparent'
                   }}
-                  onClick={() => handleTimeSlotClick(day.key, time)}
+                  onClick={() => handleTimeSlotClick(todayKey, time)}
                 />
               ))}
               {/* Sessions */}
-              {getSessionsForDay(day.key).map((session) => {
+              {getSessionsForDay(todayKey).map((session) => {
                 const position = getSessionPosition(session);
                 const isDragging = dragState.isDragging && dragState.itemId === session.id && dragState.itemType === 'session';
                 const SessionIcon = session.sessionType === 'online' ? Video : MapPin;
@@ -1158,7 +1194,7 @@ const Calendar: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => setCurrentWeek(currentWeek - 1)}
+            onClick={handlePrev}
             className="p-2 rounded-lg transition-colors hover:bg-gray-100"
             style={{ color: '#6C757D' }}
           >
@@ -1168,7 +1204,7 @@ const Calendar: React.FC = () => {
             {getHeaderText()}
           </h2>
           <button
-            onClick={() => setCurrentWeek(currentWeek + 1)}
+            onClick={handleNext}
             className="p-2 rounded-lg transition-colors hover:bg-gray-100"
             style={{ color: '#6C757D' }}
           >
