@@ -234,7 +234,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold mb-2" style={{ color: 'rgb(var(--sys-text-main))' }}>
-              Bem-vindo(a) de volta, Dr(a). Ana!
+              Bem-vindo(a) de volta, Ana!
             </h1>
             <p style={{ color: 'rgb(var(--sys-text-muted))' }}>
               Este é seu resumo do dia :)
@@ -303,7 +303,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
         {/* Sessões Anteriores */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>Sessões Anteriores</h2>
+            <h2 className="text-xl font-semibold" style={{ color: '#343A40' }}>Agendamentos Anteriores</h2>
             <button
               className="text-sm font-medium text-[#347474] hover:underline px-3 py-1 rounded transition-colors"
               onClick={() => {
@@ -317,10 +317,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-dashed border-[#DEE2E6] text-center shadow-sm">
               <FileText size={48} className="mb-4 text-[#347474]" />
               <h4 className="text-lg font-semibold mb-2" style={{ color: '#343A40' }}>
-                Nenhuma sessão registrada ainda
+                Nenhum agendamento registrado ainda
               </h4>
               <p className="text-[#6C757D] mb-6">
-                Assim que você registrar uma sessão, ela aparecerá aqui.<br />Mantenha seu histórico clínico sempre atualizado!
+                Assim que você registrar um agendamento, ele aparecerá aqui.
               </p>
               <Button
                 className="bg-[#347474] hover:bg-[#285d5d] text-white px-6 py-3 rounded-lg font-semibold text-base"
@@ -412,14 +412,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
 
         {/* Today's Sessions */}
         <div>
-            <h2 className="text-xl font-semibold text-[#1F2937] mb-4">Próximas Sessões do Dia</h2>
+            <h2 className="text-xl font-semibold text-[#1F2937] mb-4">Próximos Agendamentos do Dia</h2>
             <div className="space-y-4">
               {(() => {
                 if (loadingSessions) {
                   return (
                     <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-dashed border-[#DEE2E6] text-center shadow-sm">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#347474] mb-4"></div>
-                      <p className="text-[#6C757D]">Carregando sessões...</p>
+                      <p className="text-[#6C757D]">Carregando agendamentos...</p>
                     </div>
                   );
                 }
@@ -428,7 +428,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
                   return (
                     <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-dashed border-[#DEE2E6] text-center shadow-sm">
                       <Calendar size={48} className="mb-4 text-red-500" />
-                      <h4 className="text-lg font-semibold mb-2 text-red-600">Erro ao carregar sessões</h4>
+                      <h4 className="text-lg font-semibold mb-2 text-red-600">Erro ao carregar agendamentos</h4>
                       <p className="text-[#6C757D] mb-6">{sessionsError}</p>
                       <Button
                         className="bg-[#347474] hover:bg-[#285d5d] text-white px-6 py-3 rounded-lg font-semibold text-base"
@@ -446,13 +446,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigateToHistory }) => {
                   return (
                     <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl border border-dashed border-[#DEE2E6] text-center shadow-sm">
                       <Calendar size={48} className="mb-4 text-[#347474]" />
-                      <h4 className="text-lg font-semibold mb-2" style={{ color: '#343A40' }}>Nenhuma sessão agendada para hoje</h4>
-                      <p className="text-[#6C757D] mb-6">Você ainda não possui sessões marcadas para este dia.<br />Que tal agendar uma nova sessão?</p>
+                      <h4 className="text-lg font-semibold mb-2" style={{ color: '#343A40' }}>Nada agendado para hoje</h4>
+                      <p className="text-[#6C757D] mb-6">Você ainda não possui agendamentos marcados para este dia.<br />Que tal agendar um?</p>
                       <Button
                         className="bg-[#347474] hover:bg-[#285d5d] text-white px-6 py-3 rounded-lg font-semibold text-base"
                         onClick={() => openAddSessionModal(undefined, 'schedule')}
                       >
-                        <Plus className="w-5 h-5 mr-2" /> Agendar Nova Sessão
+                        <Plus className="w-5 h-5 mr-2" /> Novo Agendamento
                       </Button>
                     </div>
                   );

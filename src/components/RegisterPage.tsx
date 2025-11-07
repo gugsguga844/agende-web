@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, Heart, Eye, EyeOff, Mail, ArrowLeft, Check, X } from 'lucide-react';
+import { User, Lock, Heart, Eye, EyeOff, Mail, Check, X } from 'lucide-react';
 import { register } from '@/lib/api';
 import { useToast } from './ui/ToastContext';
 
@@ -99,7 +99,7 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackToLogin }
       setIsLoading(false);
       showToast('Conta criada com sucesso!', 'success');
       onRegister();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setIsLoading(false);
     }
@@ -146,8 +146,8 @@ const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onBackToLogin }
               <Heart size={32} className="text-white" />
             </div>
           </div>
-          <h1 className="text-4xl font-extrabold mb-1 tracking-tight" style={{ color: '#347474', letterSpacing: '-0.02em' }}>Sessio</h1>
-          <p className="text-lg mb-4" style={{ color: '#6C757D' }}>Sua prática, organizada e segura</p>
+          <h1 className="text-4xl font-extrabold mb-1 tracking-tight" style={{ color: '#347474', letterSpacing: '-0.02em' }}>AgendeWeb</h1>
+          <p className="text-lg mb-4" style={{ color: '#6C757D' }}>Sua agenda, organizada e segura</p>
           <h2 className="text-2xl font-bold" style={{ color: '#343A40' }}>Criar Conta</h2>
         </div>
 

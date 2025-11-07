@@ -49,7 +49,7 @@ export default function DashboardCards({ data }: DashboardCardsProps) {
               <div className="w-8 h-8 bg-[#347474] bg-opacity-10 rounded-lg flex items-center justify-center">
                 <Calendar className="w-4 h-4 text-[#347474]" />
               </div>
-              <h3 className="text-sm font-medium text-[#6B7280]">Sessões de Hoje</h3>
+              <h3 className="text-sm font-medium text-[#6B7280]">Agendamentos de Hoje</h3>
             </div>
           </div>
 

@@ -130,7 +130,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (editingSession) {
-        // Preencher formulário com dados da sessão existente
+        // Preencher formulário com dados do agendamento existente
         const sessionDate = new Date(editingSession.start_time);
         const dateString = sessionDate.toISOString().split('T')[0];
         const timeString = sessionDate.toLocaleTimeString('pt-BR', { 
@@ -146,7 +146,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
         setSessionType(editingSession.type === 'Online' ? 'online' : 'presencial');
         setPaymentStatus(editingSession.payment_status === 'Paid' ? 'pago' : 'pendente');
         setNotes(editingSession.session_notes);
-        setNotesExpanded(true); // Sempre expandir para registrar sessão
+        setNotesExpanded(true); // Sempre expandir para registrar agendamento
         setMeetingLink(editingSession.meeting_url || '');
         setPaymentMethod(editingSession.payment_method === 'Pix' ? 'pix' : 
                         editingSession.payment_method === 'Cartão de Crédito' ? 'cartao' : 
@@ -165,7 +165,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
           updated_at: new Date().toISOString()
         })));
       } else {
-        // Reset form para nova sessão
+        // Reset form para novo agendamento
       setDate('');
         setStartTime('07:00'); // Horário padrão 07:00
       setDuration('50');
@@ -196,7 +196,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       }
     }
     }
-  }, [isOpen, clientName, mode, editingSession]);
+  }, [isOpen, clientName, mode, editingSession, clients]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -299,11 +299,11 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
         return;
       }
 
-      // Check for time conflicts (apenas para novas sessões)
+      // Check for time conflicts (apenas para novos agendamentos)
       if (!editingSession) {
       const hasConflict = checkTimeConflict(date, startTime, finalDuration);
       if (hasConflict) {
-        setErrorMessage('Conflito de horário detectado. Este período já está ocupado por outra sessão.');
+        setErrorMessage('Conflito de horário detectado. Este período já está ocupado por outro agendamento.');
           scrollToTop();
         setIsSubmitting(false);
         return;
@@ -332,20 +332,20 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
       console.log('Payload enviado:', editingSession ? 'para updateSession' : 'para addSession', payload);
       
       if (editingSession) {
-        // Atualizar sessão existente
+        // Atualizar agendamento existente
         await updateSession(editingSession.id.toString(), payload);
       } else {
-        // Criar nova sessão
+        // Criar novo agendamento
         await addSession(payload);
       }
 
-      // Se possível, retorne a sessão recém criada/editada para atualização otimista
+      // Se possível, retorne o agendamento recém criado/editado para atualização otimista
       let returnedSession: Session | undefined = undefined;
       if (editingSession) {
-        // Atualização: recupere a sessão editada (idealmente da API, mas aqui retornamos o payload)
+        // Atualização: recupere o agendamento editado (idealmente da API, mas aqui retornamos o payload)
         returnedSession = { ...editingSession, ...payload };
       } else {
-        // Nova sessão: recupere a resposta da API se possível, senão retorne o payload
+        // Novo agendamento: recupere a resposta da API se possível, senão retorne o payload
         // Ideal: const created = await addSession(payload); returnedSession = created;
         // Aqui, como addSession não retorna, simulamos:
         returnedSession = {
@@ -355,27 +355,28 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
           participants: selectedClients,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          end_time: payload.end_time || payload.start_time, // fallback se não houver
+          end_time: new Date(new Date(payload.start_time).getTime() + payload.duration_min * 60000).toISOString(),
           meeting_url: payload.meeting_url || '',
         };
       }
       console.log('[AddSessionModal] onSessionSaved será chamado com:', returnedSession);
       if (typeof onSessionSaved === 'function') onSessionSaved(returnedSession);
       onClose();
-      const actionText = editingSession ? 'atualizada' : (mode === 'register' ? 'registrada' : 'agendada');
+      const actionText = editingSession ? 'atualizado(a)' : (mode === 'register' ? 'registrado(a)' : 'agendado(a)');
       
       // Determinar o texto do toast baseado no número de clientes
       let toastMessage;
       if (selectedClients.length === 1) {
-        toastMessage = `Sessão de ${selectedClients[0].full_name} ${actionText} com sucesso.`;
+        toastMessage = `Agendamento de ${selectedClients[0].full_name} ${actionText} com sucesso.`;
       } else {
-        toastMessage = `Sessão em grupo ${actionText} com sucesso.`;
+        toastMessage = `Agendamento em grupo ${actionText} com sucesso.`;
       }
       
       showToast(toastMessage, 'success');
       
-    } catch (error: any) {
-      setErrorMessage(error?.body?.message || 'Erro interno do servidor. Tente novamente em alguns instantes.');
+    } catch (error: unknown) {
+      const maybeAny = error as { body?: { message?: string } } | undefined;
+      setErrorMessage(maybeAny?.body?.message || 'Erro interno do servidor. Tente novamente em alguns instantes.');
       scrollToTop();
     } finally {
       setIsSubmitting(false);
@@ -391,12 +392,12 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
 
   const getModalTitle = () => {
     if (editingSession) {
-      return 'Registrar Sessão';
+      return 'Registrar Agendamento';
     }
     if (mode === 'register' && clientName) {
-      return `Registrar Sessão para ${clientName}`;
+      return `Registrar Agendamento para ${clientName}`;
     }
-    return mode === 'register' ? 'Registrar Sessão' : 'Novo Agendamento';
+    return mode === 'register' ? 'Registrar Agendamento' : 'Novo Agendamento';
   };
 
   const getDurationOptions = () => {
@@ -450,7 +451,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
               {/* Client Selection */}
               <div data-client-selector>
                 <label htmlFor="client" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                  Cliente{selectedClients.length > 1 ? 's (Sessão em Grupo)' : ''}
+                  Cliente{selectedClients.length > 1 ? 's (Agendamento em Grupo)' : ''}
                 </label>
                 <div className="relative">
                   <div className="relative">
@@ -540,7 +541,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                             <User size={36} className="text-[#B0BEC5]" />
                           </div>
                           <h4 className="text-lg font-semibold mb-2" style={{ color: '#343A40' }}>Nenhum cliente cadastrado</h4>
-                          <p className="text-[#6C757D] mb-4">Para agendar uma sessão, é necessário cadastrar pelo menos um cliente.<br/>Clique em <span className='font-semibold' style={{ color: '#347474' }}>'Adicionar novo cliente'</span> para começar.</p>
+                          <p className="text-[#6C757D] mb-4">Para criar um agendamento, é necessário cadastrar pelo menos um cliente.<br/>Clique em <span className='font-semibold' style={{ color: '#347474' }}>'Adicionar novo cliente'</span> para começar.</p>
                           <button
                             type="button"
                             onClick={() => setIsAddClientModalOpen(true)}
@@ -583,7 +584,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                 {/* Date */}
                 <div>
                   <label htmlFor="date" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                    Data da Sessão
+                    Data do Agendamento
                   </label>
                     <input
                       id="date"
@@ -710,7 +711,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
               {/* Session Title */}
               <div>
                 <label htmlFor="sessionTitle" className="block text-sm font-medium mb-2" style={{ color: '#343A40' }}>
-                  {mode === 'register' ? 'Foco Principal da Sessão' : 'Tema da Sessão (Opcional)'}
+                  {mode === 'register' ? 'Foco Principal do Agendamento' : 'Descrição do Agendamento (Opcional)'}
                 </label>
                 <input
                   id="sessionTitle"
@@ -739,7 +740,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
                 {/* Session Type */}
                 <div>
                   <label className="block text-sm font-medium mb-3" style={{ color: '#343A40' }}>
-                    Tipo de Sessão
+                    Tipo de Atendimento
                   </label>
                   <div className="flex space-x-3">
                     <button
@@ -905,52 +906,7 @@ const AddSessionModal: React.FC<AddSessionModalProps> = ({
               </div>
 
               {/* Notes Section */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="notes" className="block text-sm font-medium" style={{ color: '#343A40' }}>
-                    Notas da Sessão {mode === 'schedule' && <span className="text-sm font-normal" style={{ color: '#6C757D' }}>(opcional)</span>}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setNotesExpanded(!notesExpanded)}
-                    className="text-sm font-medium hover:underline"
-                    style={{ color: '#347474' }}
-                  >
-                    {notesExpanded ? 'Minimizar' : 'Expandir'}
-                  </button>
-                </div>
-                
-                {notesExpanded && (
-                  <>
-                    {/* Rich Text Toolbar */}
-                    <RichTextEditor
-                      value={notes}
-                      onChange={setNotes}
-                      required={mode === 'register'}
-                      placeholder={mode === 'register'
-                        ? 'Descreva os pontos principais da sessão, evolução do paciente, técnicas utilizadas, observações importantes...'
-                        : 'Adicione observações ou preparações para esta sessão...'}
-                      disabled={isSubmitting}
-                    />
-                  </>
-                )}
-
-                {!notesExpanded && (
-                  <div 
-                    className="w-full px-4 py-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-50"
-                    style={{ 
-                      border: '1px solid #DEE2E6',
-                      color: '#6C757D'
-                    }}
-                    onClick={() => setNotesExpanded(true)}
-                  >
-                    {mode === 'register' 
-                      ? "Clique para adicionar notas da sessão..."
-                      : "Clique para adicionar observações..."
-                    }
-                  </div>
-                )}
-              </div>
+              
 
               {/* Actions */}
               <div className="flex justify-end space-x-3 pt-4">

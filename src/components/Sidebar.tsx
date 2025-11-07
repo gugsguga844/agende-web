@@ -24,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) =
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'calendar', label: 'Agenda', icon: Calendar },
-    { id: 'sessions', label: 'Sessões', icon: FileText },
+    { id: 'sessions', label: 'Agendamentos', icon: FileText },
     { id: 'clients', label: 'Clientes', icon: Users },
     { id: 'financial', label: 'Financeiro', icon: DollarSign },
     { id: 'settings', label: 'Configurações', icon: Settings },
@@ -51,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) =
             </div>
             {!isCollapsed && (
               <h1 className="text-xl font-bold transition-opacity duration-300" style={{ color: '#343A40' }}>
-                Sessio
+                AgendeWeb
               </h1>
             )}
           </div>
@@ -120,7 +120,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onLogout }) =
             {!isCollapsed && (
               <div className="transition-opacity duration-300">
                 <p className="font-medium" style={{ color: '#343A40' }}>Dr(a). Ana Silva</p>
-                <p className="text-sm" style={{ color: '#6C757D' }}>Psicóloga</p>
+                <p className="text-sm" style={{ color: '#6C757D' }}>Profissional</p>
               </div>
             )}
           </div>

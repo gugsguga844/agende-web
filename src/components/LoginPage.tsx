@@ -73,8 +73,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigateToRegister }) 
             <Heart size={32} className="text-white" />
           </div>
         </div>
-        <h1 className="text-4xl font-extrabold mb-1 tracking-tight" style={{ color: '#347474', letterSpacing: '-0.02em' }}>Sessio</h1>
-        <p className="text-lg" style={{ color: '#6C757D' }}>Sua prática, organizada e segura</p>
+        <h1 className="text-4xl font-extrabold mb-1 tracking-tight" style={{ color: '#347474', letterSpacing: '-0.02em' }}>AgendeWeb</h1>
+        <p className="text-lg" style={{ color: '#6C757D' }}>Sua agenda, organizada e segura</p>
       </div>
 
       {/* Login Form */}

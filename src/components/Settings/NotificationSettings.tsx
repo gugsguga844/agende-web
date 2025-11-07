@@ -4,7 +4,7 @@ import { CheckCircle, AlertCircle, Mail } from 'lucide-react';
 const NotificationSettings: React.FC = () => {
   // Estado dos toggles
   const [prefs, setPrefs] = useState({
-    // Lembretes de Sessão
+    // Lembretes de Agendamento
     reminder24h: true,
     reminder1h: true,
     patientConfirm: true,
@@ -12,7 +12,7 @@ const NotificationSettings: React.FC = () => {
     // Gestão Financeira
     paymentConfirmation: true,
     financialSummary: false,
-    // Comunicações do Sessio
+    // Comunicações do AgendeWeb
     productUpdates: true,
     tipsAndArticles: true,
     // Alertas importantes (sempre on)
@@ -83,37 +83,37 @@ const NotificationSettings: React.FC = () => {
         </div>
       )}
       <h2 className="text-2xl font-bold mb-2" style={{ color: '#343A40' }}>Notificações</h2>
-      <p className="mb-6 text-[#6C757D]">Gerencie como e quando você recebe comunicações do Sessio.</p>
-      {/* Lembretes de Sessão */}
+      <p className="mb-6 text-[#6C757D]">Gerencie como e quando você recebe comunicações do AgendeWeb.</p>
+      {/* Lembretes de Agendamento */}
       <section className="mb-8">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: '#343A40' }}>
-          <Mail size={18} className="text-[#347474]" /> Lembretes de Sessão
+          <Mail size={18} className="text-[#347474]" /> Lembretes de Agendamento
         </h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <span className="font-medium">Lembrete de sessão (24h antes)</span>
-              <p className="text-sm text-[#6C757D]">Receba um lembrete por e-mail das sessões do dia seguinte.</p>
+              <span className="font-medium">Lembrete de agendamento (24h antes)</span>
+              <p className="text-sm text-[#6C757D]">Receba um lembrete por e-mail dos agendamentos do dia seguinte.</p>
             </div>
             <Switch checked={prefs.reminder24h} onChange={() => handleToggle('reminder24h')} />
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <span className="font-medium">Lembrete de sessão (1h antes)</span>
-              <p className="text-sm text-[#6C757D]">Receba um lembrete próximo ao horário da sessão.</p>
+              <span className="font-medium">Lembrete de agendamento (1h antes)</span>
+              <p className="text-sm text-[#6C757D]">Receba um lembrete próximo ao horário do agendamento.</p>
             </div>
             <Switch checked={prefs.reminder1h} onChange={() => handleToggle('reminder1h')} />
           </div>
           <div className="flex items-center justify-between">
             <div>
               <span className="font-medium">Enviar lembrete de confirmação ao agendar</span>
-              <p className="text-sm text-[#6C757D]">Envia um e-mail ao paciente assim que a sessão é marcada. (Plano Profissional)</p>
+              <p className="text-sm text-[#6C757D]">Envia um e-mail ao cliente assim que o agendamento é marcado. (Plano Profissional)</p>
             </div>
             <Switch checked={prefs.patientConfirm} onChange={() => handleToggle('patientConfirm')} />
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <span className="font-medium">Enviar lembrete de sessão ao paciente (24h antes)</span>
+              <span className="font-medium">Enviar lembrete de agendamento ao cliente (24h antes)</span>
               <p className="text-sm text-[#6C757D]">Ajuda a reduzir faltas. (Plano Profissional)</p>
             </div>
             <Switch checked={prefs.patient24h} onChange={() => handleToggle('patient24h')} />
@@ -142,16 +142,16 @@ const NotificationSettings: React.FC = () => {
           </div>
         </div>
       </section>
-      {/* Comunicações do Sessio */}
+      {/* Comunicações do AgendeWeb */}
       <section className="mb-8">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: '#343A40' }}>
-          <Mail size={18} className="text-[#347474]" /> Comunicações do Sessio
+          <Mail size={18} className="text-[#347474]" /> Comunicações do AgendeWeb
         </h3>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <span className="font-medium">Novidades e atualizações do produto</span>
-              <p className="text-sm text-[#6C757D]">Fique por dentro das novas funcionalidades e melhorias do Sessio.</p>
+              <p className="text-sm text-[#6C757D]">Fique por dentro das novas funcionalidades e melhorias do AgendeWeb.</p>
             </div>
             <Switch checked={prefs.productUpdates} onChange={() => handleToggle('productUpdates')} />
           </div>

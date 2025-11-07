@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, Globe, Sun, Moon, Monitor, Users, User } from 'lucide-react';
+import { CheckCircle, AlertCircle, Globe, Sun, Moon, Monitor, Users } from 'lucide-react';
 
 const languages = [
   { value: 'pt-BR', label: 'Português (Brasil)' },
@@ -34,7 +34,7 @@ const PreferencesSettings: React.FC = () => {
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (tz && timezones.some(t => t.value === tz)) setTimezone(tz);
-    } catch {}
+    } catch { void 0; }
   }, []);
 
   const handleSave = () => {
@@ -70,7 +70,7 @@ const PreferencesSettings: React.FC = () => {
         </div>
       )}
       <h2 className="text-2xl font-bold mb-2" style={{ color: '#343A40' }}>Preferências</h2>
-      <p className="mb-6 text-[#6C757D]">Personalize a experiência do Sessio conforme o seu jeito de trabalhar.</p>
+      <p className="mb-6 text-[#6C757D]">Personalize a experiência do AgendeWeb conforme o seu jeito de trabalhar.</p>
       {/* Terminologia */}
       <section className="mb-8 bg-white rounded-xl shadow-sm p-6" style={{ border: '1px solid #DEE2E6' }}>
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: '#343A40' }}>

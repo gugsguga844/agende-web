@@ -1,7 +1,7 @@
 import { endpoints } from './endpoints';
 import { RegisterPayload, AddSessionPayload, ClientPayload, UpdateSessionPayload, UpdateUserPayload } from '../types/api';
 
-const baseUrl = 'https://sessio-api-production.up.railway.app/api';
+const baseUrl = 'http://127.0.0.1:8000/api';
 
 function getAuthHeaders(customHeaders: any = {}, skipAuth = false) {
   const token = localStorage.getItem('token');
