@@ -19,8 +19,14 @@ async function apiGet(endpoint: string, customHeaders: any = {}, skipAuth = fals
     const res = await fetch(`${baseUrl}${endpoint}`, {
       headers: getAuthHeaders(customHeaders, skipAuth),
     });
-    if (!res.ok) throw new Error(`Erro: ${res.status}`);
-    return await res.json();
+    const responseBody = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error: any = new Error(responseBody?.message || `Erro: ${res.status}`);
+      error.status = res.status;
+      error.body = responseBody;
+      throw error;
+    }
+    return responseBody;
   } catch (err) {
     console.error(err);
     throw err;
@@ -55,8 +61,14 @@ async function apiPut(endpoint: string, data: any, customHeaders: any = {}, skip
       headers: getAuthHeaders(customHeaders, skipAuth),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(`Erro: ${res.status}`);
-    return await res.json();
+    const responseBody = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error: any = new Error(responseBody?.message || `Erro: ${res.status}`);
+      error.status = res.status;
+      error.body = responseBody;
+      throw error;
+    }
+    return responseBody;
   } catch (err) {
     console.error(err);
     throw err;
@@ -70,8 +82,14 @@ export async function apiPatch(endpoint: string, data: any, customHeaders: any =
       headers: getAuthHeaders(customHeaders, skipAuth),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(`Erro: ${res.status}`);
-    return await res.json();
+    const responseBody = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error: any = new Error(responseBody?.message || `Erro: ${res.status}`);
+      error.status = res.status;
+      error.body = responseBody;
+      throw error;
+    }
+    return responseBody;
   } catch (err) {
     console.error(err);
     throw err;
@@ -84,8 +102,14 @@ async function apiDelete(endpoint: string, customHeaders: any = {}, skipAuth = f
       method: 'DELETE',
       headers: getAuthHeaders(customHeaders, skipAuth),
     });
-    if (!res.ok) throw new Error(`Erro: ${res.status}`);
-    return await res.json();
+    const responseBody = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error: any = new Error(responseBody?.message || `Erro: ${res.status}`);
+      error.status = res.status;
+      error.body = responseBody;
+      throw error;
+    }
+    return responseBody;
   } catch (err) {
     console.error(err);
     throw err;
