@@ -1,7 +1,9 @@
 import { endpoints } from './endpoints';
 import { RegisterPayload, AddSessionPayload, ClientPayload, UpdateSessionPayload, UpdateUserPayload } from '../types/api';
 
-const baseUrl = (import.meta as any)?.env?.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const envBase = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
+const isLocalhost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+const baseUrl = envBase || (isLocalhost ? 'http://127.0.0.1:8000/api' : '/api');
 
 function getAuthHeaders(customHeaders: any = {}, skipAuth = false) {
   const token = localStorage.getItem('token');
