@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+# SPA fallback: todas as rotas do React devem retornar index.html
+[[redirects]]
+  from = "/api/*"
+  to = "http://143.110.202.176/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
